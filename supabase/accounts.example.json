@@ -1,0 +1,19 @@
+{
+  "_comment": "이 파일을 accounts.json 으로 복사한 뒤 실제 ID/PW/이름으로 채우세요. accounts.json은 .gitignore 처리됩니다.",
+  "admins": [
+    { "username": "admin1", "password": "CHANGE-ME-1", "display_name": "기획자1(나)" },
+    { "username": "admin2", "password": "CHANGE-ME-2", "display_name": "기획자2" }
+  ],
+  "players": [
+    { "username": "p01", "password": "pw-p01", "display_name": "친구1" },
+    { "username": "p02", "password": "pw-p02", "display_name": "친구2" },
+    { "username": "p03", "password": "pw-p03", "display_name": "친구3" },
+    { "username": "p04", "password": "pw-p04", "display_name": "친구4" },
+    { "username": "p05", "password": "pw-p05", "display_name": "친구5" },
+    { "username": "p06", "password": "pw-p06", "display_name": "친구6" },
+    { "username": "p07", "password": "pw-p07", "display_name": "친구7" },
+    { "username": "p08", "password": "pw-p08", "display_name": "친구8" },
+    { "username": "p09", "password": "pw-p09", "display_name": "친구9" },
+    { "username": "p10", "password": "pw-p10", "display_name": "친구10" }
+  ]
+}
