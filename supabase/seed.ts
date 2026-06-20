@@ -73,6 +73,8 @@ async function upsertUser(acc: Account, role: "admin" | "player") {
       username: acc.username,
       display_name: acc.display_name,
       role,
+      // 관리자는 강제 변경 제외, 참가자는 첫 로그인 시 변경 필요
+      must_change_password: role !== "admin",
     },
     { onConflict: "id" }
   );

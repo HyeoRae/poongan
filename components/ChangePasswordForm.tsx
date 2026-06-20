@@ -41,11 +41,11 @@ export default function ChangePasswordForm({
     <main className="flex min-h-dvh flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="text-3xl font-black text-gold">환영합니다, {displayName}님!</div>
+          <div className="text-3xl font-black text-gold">안녕하세요, {displayName}님!</div>
           <p className="mt-3 text-sm text-white/70">
             첫 로그인입니다 🎉
             <br />
-            안전을 위해 비밀번호를 새로 설정해주세요.
+            비밀번호를 새로 설정해주세요!
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function ChangePasswordForm({
         </form>
 
         <p className="mt-6 text-center text-xs text-white/40">
-          잊어버리지 않게 잘 기억해두세요!
+          잊어버리면 못찾아요~
         </p>
       </div>
     </main>
