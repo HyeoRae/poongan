@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
@@ -19,6 +20,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const profile = await requireProfile();
+
+  // 첫 로그인 — 비밀번호 변경 전이면 강제 이동
+  if (profile.must_change_password) redirect("/change-password");
+
   const isAdmin = profile.role === "admin";
 
   const supabase = await createClient();

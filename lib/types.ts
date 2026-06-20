@@ -13,6 +13,7 @@ export type Profile = {
   role: Role;
   team_id: number | null;
   gold_balance: number;
+  must_change_password: boolean;
   created_at: string;
 };
 
