@@ -1,10 +1,76 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { DrawAssignment, Profile, Team } from "@/lib/types";
 
 export type ActionResult = { ok: boolean; message: string };
+
+// 호출자가 관리자인지 확인 (공통)
+async function assertAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false as const, message: "로그인이 필요합니다." };
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (me?.role !== "admin")
+    return { ok: false as const, message: "관리자만 가능합니다." };
+  return { ok: true as const, supabase };
+}
+
+// 참가자 비밀번호 초기화 — 임시비번(=아이디)으로 되돌리고 재변경 요구
+export async function resetUserPassword(userId: string): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+
+  const { data: target } = await guard.supabase
+    .from("profiles")
+    .select("username, role, display_name")
+    .eq("id", userId)
+    .single();
+  if (!target) return { ok: false, message: "대상을 찾을 수 없습니다." };
+  if (target.role === "admin")
+    return { ok: false, message: "관리자 계정은 초기화할 수 없습니다." };
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    return {
+      ok: false,
+      message:
+        "서버에 SUPABASE_SERVICE_ROLE_KEY가 없습니다. Vercel 환경변수에 추가해주세요.",
+    };
+  }
+
+  const temp = target.username; // 임시비번 = 아이디
+  const adminClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceKey,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  const { error: pErr } = await adminClient.auth.admin.updateUserById(userId, {
+    password: temp,
+  });
+  if (pErr) return { ok: false, message: pErr.message };
+
+  const { error: fErr } = await adminClient
+    .from("profiles")
+    .update({ must_change_password: true })
+    .eq("id", userId);
+  if (fErr) return { ok: false, message: fErr.message };
+
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    message: `${target.display_name} 초기화 완료! 임시비번 = 아이디(${temp}). 그 친구는 다음 로그인 때 새 비번을 정하게 됩니다.`,
+  };
+}
 
 export async function adminGrantGold(
   userId: string,

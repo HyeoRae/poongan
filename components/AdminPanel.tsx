@@ -7,6 +7,7 @@ import {
   adminGrantTeamGold,
   startDraw,
   setAppPublic,
+  resetUserPassword,
 } from "@/app/(app)/admin/actions";
 import type { Profile, Team } from "@/lib/types";
 
@@ -32,6 +33,9 @@ export default function AdminPanel({
   const [team, setTeam] = useState("");
   const [teamAmount, setTeamAmount] = useState("");
   const [teamReason, setTeamReason] = useState("");
+
+  // 비번 초기화
+  const [resetUser, setResetUser] = useState("");
 
   const assigned = players.filter((p) => p.team_id !== null).length;
 
@@ -194,6 +198,45 @@ export default function AdminPanel({
             className="w-full rounded-xl bg-gold py-2.5 font-bold text-black disabled:opacity-50"
           >
             팀 전원 적용
+          </button>
+        </div>
+      </section>
+
+      {/* 참가자 비번 초기화 */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-1 font-bold">🔑 참가자 비번 초기화</h2>
+        <p className="mb-3 text-xs text-white/50">
+          비번을 잊은 친구용. 임시비번(=아이디)으로 되돌리고, 그 친구는 다음 로그인
+          때 새 비번을 다시 정합니다.
+        </p>
+        <div className="space-y-2">
+          <select
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
+            value={resetUser}
+            onChange={(e) => setResetUser(e.target.value)}
+          >
+            <option value="">참가자 선택</option>
+            {players.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.display_name} ({p.username})
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={pending || !resetUser}
+            onClick={() => {
+              const p = players.find((x) => x.id === resetUser);
+              if (
+                p &&
+                confirm(
+                  `${p.display_name}의 비번을 임시비번(아이디 '${p.username}')으로 초기화할까요?`
+                )
+              )
+                run(() => resetUserPassword(resetUser));
+            }}
+            className="w-full rounded-xl border border-border py-2.5 font-bold disabled:opacity-50"
+          >
+            비번 초기화
           </button>
         </div>
       </section>
