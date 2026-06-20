@@ -14,7 +14,7 @@
     "@supabase/supabase-js": "^2.45.4",
     "@types/canvas-confetti": "^1.9.0",
     "canvas-confetti": "^1.9.4",
-    "next": "15.1.6",
+    "next": "^15.5.19",
     "react": "19.0.0",
     "react-dom": "19.0.0"
   },
