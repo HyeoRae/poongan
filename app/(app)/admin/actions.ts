@@ -57,6 +57,21 @@ export async function buildTeams(force: boolean): Promise<ActionResult> {
   return { ok: true, message: "팀 배정 완료!" };
 }
 
+// 앱 공개/비공개 전환
+export async function setAppPublic(isPublic: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("app_settings")
+    .update({ is_public: isPublic, updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    message: isPublic ? "앱이 공개되었습니다! 🎉" : "앱을 비공개로 전환했습니다.",
+  };
+}
+
 // ---------- 팀 배정식 (실시간 드로우 쇼) ----------
 
 // Fisher-Yates 셔플

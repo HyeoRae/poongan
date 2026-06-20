@@ -6,15 +6,18 @@ import {
   adminGrantGold,
   adminGrantTeamGold,
   startDraw,
+  setAppPublic,
 } from "@/app/(app)/admin/actions";
 import type { Profile, Team } from "@/lib/types";
 
 export default function AdminPanel({
   players,
   teams,
+  isPublic,
 }: {
   players: Profile[];
   teams: Team[];
+  isPublic: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,6 +52,47 @@ export default function AdminPanel({
           {msg}
         </div>
       )}
+
+      {/* 앱 공개 상태 */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-bold">👁️ 앱 공개 상태</h2>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              isPublic
+                ? "bg-green-500/20 text-green-300"
+                : "bg-white/10 text-white/60"
+            }`}
+          >
+            {isPublic ? "공개됨" : "🔒 비공개"}
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-white/50">
+          비공개면 참가자는 비번 변경 후 &apos;곧 공개&apos; 화면만 봅니다. 공개로
+          바꾸면 잠금화면에 있던 참가자들이 <b>자동 입장</b>합니다.
+        </p>
+        <button
+          disabled={pending}
+          onClick={() => {
+            const next = !isPublic;
+            if (
+              confirm(
+                next
+                  ? "앱을 모두에게 공개할까요? 참가자들이 바로 입장합니다."
+                  : "앱을 다시 비공개로 전환할까요?"
+              )
+            )
+              run(() => setAppPublic(next));
+          }}
+          className={`w-full rounded-xl py-3 font-black disabled:opacity-50 ${
+            isPublic
+              ? "border border-border text-white"
+              : "bg-gold text-black"
+          }`}
+        >
+          {isPublic ? "비공개로 전환" : "🎉 앱 공개하기"}
+        </button>
+      </section>
 
       {/* 팀 배정식 */}
       <section className="rounded-2xl border border-gold/40 bg-gold/5 p-4">

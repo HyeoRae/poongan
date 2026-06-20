@@ -71,3 +71,9 @@ export type DrawState = {
   revealed_count: number;
   updated_at: string;
 };
+
+export type AppSettings = {
+  id: number;
+  is_public: boolean;
+  updated_at: string;
+};

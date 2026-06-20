@@ -27,6 +27,16 @@ export default async function AppLayout({
   const isAdmin = profile.role === "admin";
 
   const supabase = await createClient();
+
+  // 앱 비공개 상태면 참가자는 잠금 화면으로 (관리자는 통과)
+  if (!isAdmin) {
+    const { data: settings } = await supabase
+      .from("app_settings")
+      .select("is_public")
+      .eq("id", 1)
+      .single();
+    if (!settings?.is_public) redirect("/locked");
+  }
   const { data: drawRow } = await supabase
     .from("draw_state")
     .select("*")
