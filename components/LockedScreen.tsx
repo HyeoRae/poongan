@@ -40,18 +40,18 @@ export default function LockedScreen({ displayName }: { displayName: string }) {
       <div className="w-full max-w-sm">
         <div className="text-6xl">🔒</div>
         <h1 className="mt-5 text-2xl font-black text-gold">
-          {displayName}님, 준비 완료!
+          {displayName}야 반가워!
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-white/70">
           비밀번호 설정이 끝났어요.
           <br />
-          앱 내용은 <b className="text-gold">아직 비밀</b>입니다 🤫
+          앱 내용은 <b className="text-gold">아직 공개 전</b>입니다 
           <br />
-          공개되는 순간 이 화면에서 <b>자동으로 입장</b>돼요!
+          공개 후에는 <b>자동으로 입장</b>됩니다!
         </p>
 
         <div className="mt-8 rounded-2xl border border-border bg-card p-4 text-xs text-white/50">
-          기대해도 좋습니다 😏 통영-거제에서 만나요!
+           풍계모 제 4회 여름여행 : 통영-거제편
         </div>
 
         <form action={signOut} className="mt-6">
