@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import DrawCeremony from "@/components/DrawCeremony";
+import NotificationGate from "@/components/NotificationGate";
 import type { DrawState } from "@/lib/types";
 
 const IDLE_DRAW: DrawState = {
@@ -55,6 +56,7 @@ export default async function AppLayout({
       <main className="flex-1 px-4 py-4">{children}</main>
       <BottomNav isAdmin={isAdmin} />
       <DrawCeremony isAdmin={isAdmin} initial={draw} />
+      <NotificationGate />
     </div>
   );
 }

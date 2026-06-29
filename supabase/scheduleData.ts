@@ -15,7 +15,7 @@ type ScheduleSeed = {
 export const SCHEDULE_ITEMS: ScheduleSeed[] = [
   // 1일차 (7/10)
   { day: 1, start_time: "08:00", title: "부산역 집합 & 차량 렌트, 거제 출발", location: "부산역", description: "스타리아 한 대에 타는지는 미정", sort_order: 1 },
-  { day: 1, start_time: "11:00", title: "거제 식당 도착", location: "거제", sort_order: 2 },
+  { day: 1, start_time: "11:00", title: "거제로 출발", location: "거제", sort_order: 2 },
   { day: 1, start_time: "13:00", title: "점심 식사", sort_order: 3 },
   { day: 1, start_time: "14:00", title: "거제 특별 액티비티", location: "거제", sort_order: 4 },
   { day: 1, start_time: "17:00", title: "숙소 도착 & 휴식", location: "거제 숙소", sort_order: 5 },
@@ -38,7 +38,7 @@ export const SCHEDULE_ITEMS: ScheduleSeed[] = [
 
   // 3일차 (7/12)
   { day: 3, start_time: "~11:00", title: "기상 & 외출 준비", description: "해장라면", sort_order: 1 },
-  { day: 3, start_time: "11:00", title: "근처 카페", sort_order: 2 },
+  { day: 3, start_time: "11:00", title: "근처 카페로 이동", sort_order: 2 },
   { day: 3, start_time: "12:30", title: "부산 이동", location: "부산", sort_order: 3 },
   { day: 3, start_time: "14:30", title: "각자 귀가", sort_order: 4 },
 ];

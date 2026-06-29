@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>풍산 통영·거제 여행 쇼케이스</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --ink:#0f2740; --sea:#1b87c9; --sea2:#0a4a7a; --sun:#ffb347; --coral:#ff7a59;
+    --mint:#2fb89a; --paper:#f7f3ea;
+  }
+  html,body{height:100%;}
+  body{
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Pretendard",sans-serif;
+    background:#06121f; color:var(--ink); overflow:hidden;
+  }
+  /* ===== deck ===== */
+  .deck{ position:relative; width:100vw; height:100vh; }
+  .slide{
+    position:absolute; inset:0; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    padding:5vh 6vw; opacity:0; transition:opacity .45s ease;
+  }
+  .slide.active{ display:flex; opacity:1; }
+  .scene{
+    position:absolute; inset:0; z-index:0; overflow:hidden;
+  }
+  .scene svg{ width:100%; height:100%; display:block; }
+  .content{ position:relative; z-index:2; max-width:1000px; width:100%; }
+
+  /* readability scrim */
+  .scrim{ position:absolute; inset:0; z-index:1;
+    background:linear-gradient(180deg,rgba(6,18,31,.15) 0%,rgba(6,18,31,.55) 100%);}
+
+  /* badges + text */
+  .daytag{
+    display:inline-block; font-weight:800; letter-spacing:.05em;
+    padding:.4em 1em; border-radius:99px; color:#fff; font-size:clamp(13px,1.6vw,18px);
+    box-shadow:0 6px 20px rgba(0,0,0,.25); margin-bottom:18px;
+  }
+  .d1{background:var(--sea);} .d2{background:var(--mint);} .d3{background:var(--sun);color:#5a3b00;}
+  .info{background:var(--coral);} .app{background:#7a5cff;}
+
+  h1{ color:#fff; font-size:clamp(34px,6vw,76px); line-height:1.08; font-weight:900;
+    text-shadow:0 4px 24px rgba(0,0,0,.45); }
+  h2{ color:#fff; font-size:clamp(26px,4.6vw,52px); font-weight:900;
+    text-shadow:0 3px 18px rgba(0,0,0,.45); }
+  .sub{ color:#eaf4ff; font-size:clamp(16px,2.4vw,26px); margin-top:14px; font-weight:600;
+    text-shadow:0 2px 12px rgba(0,0,0,.4);}
+  .time{ color:#fff; font-weight:900; font-size:clamp(20px,3vw,34px);
+    background:rgba(0,0,0,.28); padding:.15em .6em; border-radius:12px; display:inline-block; margin-bottom:14px;}
+
+  ul.points{ list-style:none; margin-top:26px; display:flex; flex-direction:column; gap:14px;}
+  ul.points li{ color:#fff; font-size:clamp(16px,2.3vw,26px); font-weight:600;
+    background:rgba(255,255,255,.14); backdrop-filter:blur(6px);
+    border-left:5px solid var(--sun); padding:14px 18px; border-radius:12px;
+    text-shadow:0 1px 6px rgba(0,0,0,.3);}
+
+  /* region table */
+  table{ width:100%; border-collapse:collapse; margin-top:22px;
+    background:rgba(255,255,255,.92); border-radius:14px; overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,.35); }
+  th,td{ padding:12px 18px; text-align:left; font-size:clamp(14px,1.9vw,21px);}
+  th{ background:var(--sea2); color:#fff; }
+  tr:nth-child(even) td{ background:#eef5fb; }
+  td b{ color:var(--sea2); }
+  .warn{ margin-top:22px; background:rgba(255,122,89,.95); color:#fff; font-weight:700;
+    padding:16px 20px; border-radius:14px; font-size:clamp(15px,2.1vw,22px);
+    box-shadow:0 10px 30px rgba(0,0,0,.3);}
+
+  .check{ list-style:none; margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .check li{ color:#fff; font-size:clamp(15px,2vw,23px); font-weight:600;
+    background:rgba(255,255,255,.14); padding:14px 16px; border-radius:12px;
+    display:flex; gap:12px; align-items:center;}
+  .check li::before{ content:"☐"; font-size:1.3em; color:var(--sun);}
+  @media(max-width:760px){ .check{grid-template-columns:1fr;} }
+
+  /* nav */
+  .nav{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    z-index:50; display:flex; gap:10px; align-items:center;}
+  .nav button{ border:0; cursor:pointer; background:rgba(255,255,255,.9);
+    color:var(--ink); font-weight:800; padding:10px 18px; border-radius:99px;
+    font-size:16px; box-shadow:0 6px 18px rgba(0,0,0,.3);}
+  .nav button:active{ transform:scale(.96); }
+  .counter{ color:#fff; font-weight:800; background:rgba(0,0,0,.35);
+    padding:8px 14px; border-radius:99px; font-size:15px; }
+  .dots{ position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:50; display:flex; gap:7px;}
+  .dot{ width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.4);}
+  .dot.on{ background:#fff; width:26px; border-radius:99px; }
+  .hint{ position:fixed; top:16px; right:20px; z-index:50; color:rgba(255,255,255,.6);
+    font-size:13px; font-weight:600;}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- ============ SLIDE 1 : TITLE ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffd9a0"/><stop offset=".45" stop-color="#ff9e7d"/>
+            <stop offset="1" stop-color="#1b87c9"/>
+          </linearGradient>
+          <linearGradient id="sea1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2a9bd6"/><stop offset="1" stop-color="#0a4a7a"/>
+          </linearGradient>
+        </defs>
+        <rect width="1280" height="720" fill="url(#sky1)"/>
+        <circle cx="640" cy="300" r="90" fill="#fff3d6" opacity=".95"/>
+        <circle cx="640" cy="300" r="130" fill="#fff" opacity=".18"/>
+        <path d="M0 430 q160 -40 320 0 t320 0 t320 0 t320 0 V720 H0Z" fill="url(#sea1)"/>
+        <path d="M0 470 q200 30 400 0 t400 0 t480 0 V720 H0Z" fill="#0a4a7a" opacity=".55"/>
+        <!-- islands -->
+        <path d="M120 430 q60 -70 150 -55 q60 10 70 55Z" fill="#15506e"/>
+        <path d="M980 432 q80 -90 200 -60 q60 18 100 60Z" fill="#103f59"/>
+        <!-- boat -->
+        <g transform="translate(560,470)">
+          <path d="M0 30 L150 30 L130 60 L20 60 Z" fill="#ffffff"/>
+          <rect x="68" y="-30" width="6" height="60" fill="#5a3b00"/>
+          <path d="M74 -28 L120 20 L74 20 Z" fill="#ff7a59"/>
+        </g>
+        <!-- birds -->
+        <path d="M260 180 q15 -14 30 0 q15 -14 30 0" stroke="#fff" stroke-width="3" fill="none" opacity=".8"/>
+        <path d="M340 150 q12 -11 24 0 q12 -11 24 0" stroke="#fff" stroke-width="3" fill="none" opacity=".7"/>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content" style="text-align:center;">
+      <div class="daytag info">2박 3일 · 12인 · 거제터미널 집합</div>
+      <h1>풍산 통영·거제<br>여행 쇼케이스 🌊</h1>
+      <p class="sub">제 4회 풍계모 여름여행 — 일정 간단히 미리보기</p>
+      <p class="sub">★ 생산적인 조언 환영 ★</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 2 : 교통편 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="map" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#dfeefb"/><stop offset="1" stop-color="#9cc6e6"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#map)"/>
+        <g stroke="#7fb0d6" stroke-width="2" opacity=".5">
+          <path d="M200 120 C400 200 300 400 520 520" fill="none"/>
+          <path d="M1080 90 C900 220 1000 360 640 560" fill="none"/>
+          <path d="M640 60 C660 250 640 420 620 560" fill="none"/>
+        </g>
+        <circle cx="620" cy="580" r="16" fill="#ff7a59"/>
+        <circle cx="620" cy="580" r="30" fill="#ff7a59" opacity=".25"/>
+        <text x="620" y="640" font-size="26" font-weight="800" fill="#0a4a7a" text-anchor="middle">거제터미널</text>
+      </svg>
+    </div>
+    <div class="scrim" style="background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(10,74,122,.35));"></div>
+    <div class="content">
+      <div class="daytag info">STEP 1 · 최우선 결정</div>
+      <h2>🚍 교통편 — 거제터미널 집합</h2>
+      <table>
+        <tr><th>지역</th><th>인원</th></tr>
+        <tr><td><b>서울</b></td><td>강욱, 민형</td></tr>
+        <tr><td><b>화정·병점</b></td><td>현태, 규림, 도현</td></tr>
+        <tr><td><b>수원 망포</b></td><td>창희, 종현</td></tr>
+        <tr><td><b>화성 동탄</b></td><td>종무</td></tr>
+        <tr><td><b>성남 분당</b></td><td>민수</td></tr>
+        <tr><td><b>대전 / 대구</b></td><td>기정 / 남용</td></tr>
+        <tr><td><b>태안 (불확실)</b></td><td>수민</td></tr>
+      </table>
+      <div class="warn">⚠️ 각자 <b>오는 수단 · 가는 수단</b> 확정 → 예약 필요 · 지역별 카풀 묶기 · 수민 별도 확인</div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 3 : 1일차 도착/점심 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="d1a" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#bfe6ff"/><stop offset="1" stop-color="#1b87c9"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#d1a)"/>
+        <circle cx="1050" cy="160" r="70" fill="#fff5cf"/>
+        <path d="M0 480 q200 -30 420 0 t440 0 t420 0 V720 H0Z" fill="#0a4a7a"/>
+        <path d="M0 520 q220 30 440 0 t440 0 V720 H0Z" fill="#073858" opacity=".6"/>
+        <!-- pier + plates(food) -->
+        <rect x="120" y="470" width="420" height="20" fill="#7a5230"/>
+        <g><circle cx="240" cy="455" r="34" fill="#fff"/><circle cx="240" cy="455" r="20" fill="#ffb347"/></g>
+        <g><circle cx="340" cy="455" r="34" fill="#fff"/><circle cx="340" cy="455" r="20" fill="#ff7a59"/></g>
+        <g><circle cx="440" cy="455" r="34" fill="#fff"/><circle cx="440" cy="455" r="20" fill="#2fb89a"/></g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag d1">1일차</div>
+      <span class="time">13:00 거제 도착</span>
+      <h2>🍽️ 점심 식사 & 출발</h2>
+      <ul class="points">
+        <li>오후 1시 거제 집결 완료</li>
+        <li>다 같이 점심 식사 </li>
+        <li>곧이어 거제 특별 액티비티로!</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 4 : 1일차 특별 액티비티 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><radialGradient id="myst" cx=".5" cy=".4" r=".8">
+          <stop offset="0" stop-color="#3a1d6e"/><stop offset="1" stop-color="#120a2a"/></radialGradient></defs>
+        <rect width="1280" height="720" fill="url(#myst)"/>
+        <g fill="#fff" opacity=".8">
+          <circle cx="200" cy="160" r="2"/><circle cx="400" cy="100" r="2.5"/><circle cx="900" cy="140" r="2"/>
+          <circle cx="1100" cy="220" r="3"/><circle cx="640" cy="80" r="2"/><circle cx="760" cy="200" r="2"/>
+        </g>
+        <text x="640" y="420" font-size="220" text-anchor="middle" fill="#ffb347" opacity=".9" font-weight="900">?</text>
+        <circle cx="640" cy="360" r="280" fill="none" stroke="#ffb347" stroke-width="3" opacity=".25"/>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content" style="text-align:center;">
+      <div class="daytag d1">1일차 · 오후</div>
+      <h2>💥 거제 특별 액티비티</h2>
+      <p class="sub" style="margin-top:24px;">내용은 <b style="color:#ffb347;">미공개</b> — 현장에서 깜짝 공개!</p>
+      <p class="sub">활동 후 숙소 입실 & 잠깐 휴식 (노래방기계 있음)</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 5 : 1일차 저녁 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="night" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1a2a52"/><stop offset="1" stop-color="#0a1530"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#night)"/>
+        <circle cx="1040" cy="150" r="55" fill="#fdf6d8"/>
+        <g fill="#fff" opacity=".7"><circle cx="200" cy="120" r="2"/><circle cx="520" cy="90" r="2"/><circle cx="800" cy="160" r="2"/></g>
+        <path d="M0 500 q220 -20 440 0 t440 0 t400 0 V720 H0Z" fill="#0a1f3a"/>
+        <!-- campfire / bbq -->
+        <g transform="translate(600,470)">
+          <ellipse cx="40" cy="90" rx="90" ry="16" fill="#000" opacity=".3"/>
+          <path d="M40 20 q30 30 0 60 q-30 -30 0 -60Z" fill="#ff7a59"/>
+          <path d="M40 40 q16 18 0 36 q-16 -18 0 -36Z" fill="#ffd34d"/>
+          <rect x="-10" y="78" width="14" height="40" fill="#5a3b00" transform="rotate(20 -3 98)"/>
+          <rect x="76" y="78" width="14" height="40" fill="#5a3b00" transform="rotate(-20 83 98)"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag d1">1일차 · 저녁</div>
+      <h2>🌙 저녁 식사 & 저녁 컨텐츠</h2>
+      <ul class="points">
+        <li>다 같이 저녁 식사 (바베큐할지는 모르겠노)</li>
+        <li>밤에는 저녁 컨텐츠 진행</li>
+        <li>POONGSAN 앱 미니게임은 준비중(개발하다 안되면 폐기할거임)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 6 : 2일차 낚시 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffe0b0"/><stop offset=".5" stop-color="#9fd0ec"/><stop offset="1" stop-color="#1b87c9"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#dawn)"/>
+        <circle cx="320" cy="200" r="60" fill="#fff3d0"/>
+        <path d="M0 460 q220 -30 440 0 t440 0 t400 0 V720 H0Z" fill="#0a4a7a"/>
+        <!-- fisher on dock -->
+        <rect x="820" y="440" width="380" height="16" fill="#7a5230"/>
+        <g transform="translate(900,360)">
+          <circle cx="0" cy="0" r="20" fill="#ffd9b0"/>
+          <rect x="-14" y="20" width="28" height="50" rx="8" fill="#2fb89a"/>
+          <line x1="14" y1="30" x2="120" y2="120" stroke="#5a3b00" stroke-width="3"/>
+          <line x1="120" y1="120" x2="120" y2="180" stroke="#fff" stroke-width="1.5"/>
+          <path d="M112 180 q8 10 16 0" stroke="#0a4a7a" stroke-width="3" fill="none"/>
+        </g>
+        <!-- fish -->
+        <g transform="translate(560,560)" fill="#fff" opacity=".85">
+          <path d="M0 0 q20 -14 40 0 q-20 14 -40 0Z"/><path d="M40 0 l14 -8 v16Z"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag d2">2일차 · 아침</div>
+      <span class="time">08:30 낚시 🎣</span>
+      <h2>새벽 바다 낚시</h2>
+      <ul class="points">
+        <li>아침 8시 반, 선상낚시 </li>
+        <li>전날 술쳐먹고 늦잠자면 못갈지도</li>
+        <li>낚시 후 점심 식사 (회떠먹으면 될듯)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 7 : 2일차 루지 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="hill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#bfe6ff"/><stop offset="1" stop-color="#7fc77a"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#hill)"/>
+        <circle cx="1080" cy="140" r="60" fill="#fff5cf"/>
+        <path d="M0 720 L0 420 Q400 360 700 480 T1280 460 L1280 720Z" fill="#3fa05a"/>
+        <path d="M0 720 L0 520 Q500 460 900 560 T1280 560 L1280 720Z" fill="#2f8048"/>
+        <!-- luge track -->
+        <path d="M120 380 Q500 420 700 540 T1180 600" stroke="#e8e8e8" stroke-width="22" fill="none" stroke-linecap="round"/>
+        <path d="M120 380 Q500 420 700 540 T1180 600" stroke="#ff7a59" stroke-width="4" fill="none" stroke-dasharray="6 18"/>
+        <!-- cart -->
+        <g transform="translate(640,500)">
+          <rect x="-22" y="-10" width="44" height="20" rx="8" fill="#ff7a59"/>
+          <circle cx="-14" cy="14" r="9" fill="#222"/><circle cx="14" cy="14" r="9" fill="#222"/>
+          <circle cx="0" cy="-22" r="11" fill="#ffd9b0"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag d2">2일차 · 통영 이동 후</div>
+      <h2>🛷 액티비티 즐기기</h2>
+      <ul class="points">
+        <li>통영으로 이동 </li>
+        <li>스카이라인 루지 레이싱</li>
+        <li>빨리 끝나면 다른 거 더할수도</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 8 : 2일차 케이블카 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="cab" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffd9a0"/><stop offset="1" stop-color="#5fb0dc"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#cab)"/>
+        <circle cx="980" cy="170" r="65" fill="#fff3d0"/>
+        <!-- mountains -->
+        <path d="M0 520 L260 300 L460 520Z" fill="#3a7a55"/>
+        <path d="M380 520 L680 250 L980 520Z" fill="#2f6347"/>
+        <path d="M0 560 q300 -20 640 0 t640 0 V720 H0Z" fill="#1b87c9"/>
+        <!-- cable line + car -->
+        <line x1="120" y1="220" x2="1180" y2="360" stroke="#444" stroke-width="3"/>
+        <g transform="translate(560,300) rotate(8)">
+          <line x1="0" y1="-30" x2="0" y2="0" stroke="#444" stroke-width="3"/>
+          <rect x="-30" y="0" width="60" height="42" rx="10" fill="#ff7a59"/>
+          <rect x="-22" y="8" width="44" height="18" rx="4" fill="#fff" opacity=".85"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag d2">2일차 · 오후</div>
+      <h2>🚠 해상공원 케이블카</h2>
+      <ul class="points">
+        <li>하늘에서 내려다보는 통영 바다</li>
+        <li>인생샷 뭐시기 </li>
+        <li>저녁은 통영 다찌집으로</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 9 : 2일차 다찌집 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="izak" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3a1e2e"/><stop offset="1" stop-color="#1a0f1c"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#izak)"/>
+        <!-- lanterns -->
+        <g>
+          <line x1="0" y1="120" x2="1280" y2="100" stroke="#5a3b00" stroke-width="3"/>
+          <g transform="translate(280,110)"><rect x="-22" y="0" width="44" height="56" rx="10" fill="#ff5a4d"/><line x1="0" y1="-12" x2="0" y2="0" stroke="#5a3b00" stroke-width="2"/></g>
+          <g transform="translate(640,105)"><rect x="-22" y="0" width="44" height="56" rx="10" fill="#ffb347"/></g>
+          <g transform="translate(1000,108)"><rect x="-22" y="0" width="44" height="56" rx="10" fill="#ff5a4d"/></g>
+        </g>
+        <!-- table full of dishes -->
+        <rect x="0" y="500" width="1280" height="220" fill="#5a3b22"/>
+        <g>
+          <circle cx="300" cy="540" r="40" fill="#fff"/><circle cx="300" cy="540" r="24" fill="#ff7a59"/>
+          <circle cx="500" cy="560" r="44" fill="#fff"/><circle cx="500" cy="560" r="26" fill="#2fb89a"/>
+          <circle cx="720" cy="540" r="40" fill="#fff"/><circle cx="720" cy="540" r="24" fill="#ffb347"/>
+          <circle cx="940" cy="560" r="44" fill="#fff"/><circle cx="940" cy="560" r="26" fill="#ff5a4d"/>
+          <rect x="1090" y="500" width="28" height="80" rx="6" fill="#9fd86a"/>
+        </g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content" style="text-align:center;">
+      <div class="daytag d2">2일차 · 저녁</div>
+      <h2>🍶 통영 다찌집</h2>
+      <p class="sub" style="margin-top:22px;">상다리 부러지는 통영 다찌의 밤 — 하루의 마무리 🥂</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 10 : 3일차 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="d3" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff0d6"/><stop offset="1" stop-color="#9fd0ec"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#d3)"/>
+        <circle cx="640" cy="220" r="80" fill="#fff5cf"/>
+        <path d="M0 500 q220 -20 440 0 t440 0 t400 0 V720 H0Z" fill="#1b87c9"/>
+        <!-- waving hands / road home -->
+        <path d="M540 720 L600 480 L680 480 L740 720Z" fill="#cfd8dc" opacity=".7"/>
+        <line x1="640" y1="500" x2="640" y2="700" stroke="#fff" stroke-width="6" stroke-dasharray="20 24"/>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content" style="text-align:center;">
+      <div class="daytag d3">3일차</div>
+      <h2>👋 아점 먹고 귀가</h2>
+      <p class="sub" style="margin-top:22px;">거제에서 느긋한 아점 후, 각자 집으로 — 다음을 기약하며!</p>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 11 : POONGSAN 앱 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><radialGradient id="appbg" cx=".5" cy=".4" r=".9">
+          <stop offset="0" stop-color="#5b46c9"/><stop offset="1" stop-color="#1a1040"/></radialGradient></defs>
+        <rect width="1280" height="720" fill="url(#appbg)"/>
+        <!-- phone -->
+        <g transform="translate(540,160)">
+          <rect x="0" y="0" width="200" height="400" rx="32" fill="#0c0820" stroke="#7a5cff" stroke-width="4"/>
+          <rect x="16" y="20" width="168" height="360" rx="20" fill="#1a1240"/>
+          <circle cx="100" cy="150" r="48" fill="#ffb347"/>
+          <text x="100" y="166" font-size="44" text-anchor="middle" font-weight="900" fill="#5a3b00">₩</text>
+          <rect x="46" y="230" width="108" height="20" rx="10" fill="#7a5cff"/>
+          <rect x="46" y="266" width="108" height="20" rx="10" fill="#2fb89a"/>
+          <rect x="46" y="302" width="108" height="20" rx="10" fill="#ff7a59"/>
+        </g>
+        <!-- floating coins -->
+        <g fill="#ffb347"><circle cx="380" cy="240" r="26"/><circle cx="920" cy="300" r="22"/><circle cx="860" cy="520" r="18"/><circle cx="420" cy="500" r="20"/></g>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content" style="text-align:center;">
+      <div class="daytag app">여행 내내 진행 📱</div>
+      <h2>POONGSAN 앱 컨텐츠</h2>
+      <ul class="points" style="max-width:640px;margin-left:auto;margin-right:auto;text-align:left;">
+        <li>🪙 토큰을 이용한 미니 컨텐츠</li>
+        <li>🎮 각 일정별 미니게임 존재</li>
+        <li>🤫 상세 내용은 미공개 — 당일 현장에서 공개!</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 12 : 체크리스트 ============ -->
+  <section class="slide">
+    <div class="scene">
+      <svg viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+        <defs><linearGradient id="end" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0a4a7a"/><stop offset="1" stop-color="#06121f"/></linearGradient></defs>
+        <rect width="1280" height="720" fill="url(#end)"/>
+        <path d="M0 560 q220 -30 440 0 t440 0 t400 0 V720 H0Z" fill="#073858"/>
+      </svg>
+    </div>
+    <div class="scrim"></div>
+    <div class="content">
+      <div class="daytag info">오늘 회의 체크리스트 ✅</div>
+      <h2>지금 정하고 갈 것</h2>
+      <ul class="check">
+        <li>각자 오는 수단 확정 → 예약</li>
+        <li>각자 가는 수단 확정 → 예약</li>
+        <li>지역별 카풀 · 동선 협의</li>
+        <li>수민(태안) 어케오는지 확인</li>
+        <li>거제터미널 집합 시간 (13:00 부근 도착)</li>
+        <li>군것질 추천 받습니다.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<!-- ===== UI ===== -->
+<div class="dots" id="dots"></div>
+<div class="hint">← → 또는 클릭으로 이동</div>
+<div class="nav">
+  <button onclick="go(-1)">◀ 이전</button>
+  <span class="counter" id="counter">1 / 12</span>
+  <button onclick="go(1)">다음 ▶</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  const dotsWrap=document.getElementById('dots');
+  const counter=document.getElementById('counter');
+  let i=0;
+  slides.forEach((_,n)=>{ const d=document.createElement('div'); d.className='dot'+(n===0?' on':''); d.onclick=()=>show(n); dotsWrap.appendChild(d); });
+  const dots=[...dotsWrap.children];
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    dots.forEach((d,k)=>d.classList.toggle('on',k===i));
+    counter.textContent=(i+1)+' / '+slides.length;
+  }
+  function go(step){ show(i+step); }
+  show(0);
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' ')go(1);
+    if(e.key==='ArrowLeft')go(-1);
+    if(e.key==='Home')show(0); if(e.key==='End')show(slides.length-1);
+  });
+  document.getElementById('deck').addEventListener('click',e=>{ if(!e.target.closest('.nav')&&!e.target.closest('.dots')) go(1); });
+</script>
+</body>
+</html>
