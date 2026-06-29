@@ -50,7 +50,7 @@ export default function Wallet({
       <h1 className="text-xl font-black">💰 내 지갑</h1>
 
       <div className="rounded-2xl border border-gold/40 bg-gold/10 p-5 text-center">
-        <p className="text-xs text-white/60">보유 골드</p>
+        <p className="text-xs text-white/60">보유 풍산토큰</p>
         <p className="mt-1 text-3xl font-black text-gold tabular-nums">
           🪙 {me.gold_balance.toLocaleString()}
         </p>
@@ -58,7 +58,7 @@ export default function Wallet({
 
       {/* 송금 / 배신 */}
       <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 font-bold">🤝 골드 보내기 (선물·뇌물·배신)</h2>
+        <h2 className="mb-3 font-bold">🤝 풍산토큰 보내기 (선물·뇌물·배신)</h2>
         <form onSubmit={onTransfer} className="space-y-2">
           <select
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
@@ -96,9 +96,9 @@ export default function Wallet({
         </form>
       </section>
 
-      {/* 골드 내역 */}
+      {/* 풍산토큰 내역 */}
       <section>
-        <h2 className="mb-3 font-bold">📜 골드 내역</h2>
+        <h2 className="mb-3 font-bold">📜 풍산토큰 내역</h2>
         {transactions.length === 0 ? (
           <p className="text-sm text-white/40">아직 내역이 없습니다.</p>
         ) : (

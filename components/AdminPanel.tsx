@@ -9,6 +9,7 @@ import {
   setAppPublic,
   resetUserPassword,
 } from "@/app/(app)/admin/actions";
+import { broadcastNotification } from "@/app/(app)/push/actions";
 import type { Profile, Team } from "@/lib/types";
 
 export default function AdminPanel({
@@ -24,6 +25,15 @@ export default function AdminPanel({
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
 
+  // 서브탭
+  const TABS = [
+    { id: "event", label: "🎲 이벤트" },
+    { id: "token", label: "🪙 토큰" },
+    { id: "notify", label: "🔔 알림" },
+    { id: "member", label: "🔑 참가자" },
+  ] as const;
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("event");
+
   // 개인 지급
   const [user, setUser] = useState("");
   const [amount, setAmount] = useState("");
@@ -36,6 +46,10 @@ export default function AdminPanel({
 
   // 비번 초기화
   const [resetUser, setResetUser] = useState("");
+
+  // 전체 알림
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushBody, setPushBody] = useState("");
 
   const assigned = players.filter((p) => p.team_id !== null).length;
 
@@ -57,6 +71,25 @@ export default function AdminPanel({
         </div>
       )}
 
+      {/* 서브탭 네비 */}
+      <div className="flex gap-1 rounded-2xl border border-border bg-card p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 rounded-xl py-2 text-xs font-bold transition-colors ${
+              tab === t.id
+                ? "bg-gold text-black"
+                : "text-white/60 hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "event" && (
+        <>
       {/* 앱 공개 상태 */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-1 flex items-center justify-between">
@@ -120,10 +153,14 @@ export default function AdminPanel({
           🎬 팀 배정식 시작
         </button>
       </section>
+        </>
+      )}
 
-      {/* 개인 골드 지급/차감 */}
+      {tab === "token" && (
+        <>
+      {/* 개인 풍산토큰 지급/차감 */}
       <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 font-bold">🪙 개인 골드 지급/차감</h2>
+        <h2 className="mb-3 font-bold">🪙 개인 풍산토큰 지급/차감</h2>
         <div className="space-y-2">
           <select
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
@@ -160,9 +197,9 @@ export default function AdminPanel({
         </div>
       </section>
 
-      {/* 팀 골드 지급/차감 */}
+      {/* 팀 풍산토큰 지급/차감 */}
       <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-1 font-bold">👥 팀 전원 골드 지급/차감</h2>
+        <h2 className="mb-1 font-bold">👥 팀 전원 풍산토큰 지급/차감</h2>
         <p className="mb-3 text-xs text-white/50">선택한 팀 전원에게 같은 금액 적용</p>
         <div className="space-y-2">
           <select
@@ -201,7 +238,55 @@ export default function AdminPanel({
           </button>
         </div>
       </section>
+        </>
+      )}
 
+      {tab === "notify" && (
+        <>
+      {/* 전체 푸시 알림 */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-1 font-bold">🔔 전체 알림 보내기</h2>
+        <p className="mb-3 text-xs text-white/50">
+          &apos;알림 켜기&apos;를 한 참가자 전원의 폰으로 푸시가 전송됩니다.
+        </p>
+        <div className="space-y-2">
+          <input
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
+            placeholder="알림 제목 (예: 집합 5분 전!)"
+            value={pushTitle}
+            onChange={(e) => setPushTitle(e.target.value)}
+          />
+          <textarea
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
+            placeholder="내용 (선택)"
+            rows={2}
+            value={pushBody}
+            onChange={(e) => setPushBody(e.target.value)}
+          />
+          <button
+            disabled={pending || !pushTitle.trim()}
+            onClick={() => {
+              if (confirm("전원에게 알림을 보낼까요?"))
+                run(async () => {
+                  const r = await broadcastNotification(pushTitle, pushBody);
+                  if (r.ok) {
+                    setPushTitle("");
+                    setPushBody("");
+                  }
+                  return r;
+                });
+            }}
+            className="w-full rounded-xl bg-gold py-2.5 font-bold text-black disabled:opacity-50"
+          >
+            전체 발송
+          </button>
+        </div>
+      </section>
+        </>
+      )}
+
+      {tab === "member" && (
+        <>
       {/* 참가자 비번 초기화 */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-1 font-bold">🔑 참가자 비번 초기화</h2>
@@ -240,6 +325,8 @@ export default function AdminPanel({
           </button>
         </div>
       </section>
+        </>
+      )}
     </div>
   );
 }

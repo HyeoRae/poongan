@@ -12,6 +12,7 @@ import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { SCHEDULE_ITEMS } from "./scheduleData";
 
 config({ path: ".env.local" });
 
@@ -92,32 +93,16 @@ async function seedTeams() {
 }
 
 async function seedSchedule() {
-  const items = [
-    { day: 1, start_time: "10:00", title: "통영 집결 & 출발", location: "통영종합버스터미널", sort_order: 1 },
-    { day: 1, start_time: "12:00", title: "점심 — 통영 충무김밥", location: "중앙시장", sort_order: 2 },
-    { day: 1, start_time: "14:00", title: "🎲 팀 빌딩 & 오프닝 게임", description: "랜덤 5:5 팀 배정", sort_order: 3 },
-    { day: 1, start_time: "16:00", title: "케이블카 & 동피랑 벽화마을", location: "통영", sort_order: 4 },
-    { day: 1, start_time: "19:00", title: "저녁 & 숙소 체크인", location: "통영 숙소", sort_order: 5 },
-    { day: 1, start_time: "21:00", title: "🃏 밤 도박장 오픈", description: "골드 베팅 컨텐츠", sort_order: 6 },
-    { day: 2, start_time: "09:00", title: "거제 이동", location: "거제", sort_order: 1 },
-    { day: 2, start_time: "11:00", title: "바람의 언덕 & 신선대", location: "거제", sort_order: 2 },
-    { day: 2, start_time: "13:00", title: "점심 & 🎯 미션 게임", sort_order: 3 },
-    { day: 2, start_time: "15:00", title: "외도 보타니아 / 해상관광", location: "거제", sort_order: 4 },
-    { day: 2, start_time: "19:00", title: "저녁 BBQ & 🎤 팀 대항전", sort_order: 5 },
-    { day: 2, start_time: "22:00", title: "🤝 배신의 밤 (송금/강탈)", sort_order: 6 },
-    { day: 3, start_time: "10:00", title: "체크아웃 & 자유시간", location: "거제", sort_order: 1 },
-    { day: 3, start_time: "12:00", title: "🏆 최종 골드 집계 & 시상", sort_order: 2 },
-    { day: 3, start_time: "14:00", title: "해산", sort_order: 3 },
-  ];
-  // 일정은 멱등 보장이 어렵게 자동증가라 — 비어있을 때만 삽입
+  // 일정은 멱등 보장이 어렵게 자동증가라 — 비어있을 때만 삽입.
+  // 기존 일정을 schedule.md 내용으로 덮어쓰려면 `npm run seed:schedule` 사용.
   const { count } = await admin.from("schedule").select("*", { count: "exact", head: true });
   if ((count ?? 0) > 0) {
     console.log("  일정 이미 존재 — 건너뜀");
     return;
   }
-  const { error } = await admin.from("schedule").insert(items);
+  const { error } = await admin.from("schedule").insert(SCHEDULE_ITEMS);
   if (error) throw error;
-  console.log(`  일정 ${items.length}건 삽입`);
+  console.log(`  일정 ${SCHEDULE_ITEMS.length}건 삽입`);
 }
 
 async function main() {

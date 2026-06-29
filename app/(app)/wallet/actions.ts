@@ -23,5 +23,5 @@ export async function transferGold(
 
   revalidatePath("/wallet");
   revalidatePath("/dashboard");
-  return { ok: true, message: `${amount.toLocaleString()} 골드를 보냈습니다.` };
+  return { ok: true, message: `${amount.toLocaleString()} 풍산토큰을 보냈습니다.` };
 }

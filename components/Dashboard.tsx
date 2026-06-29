@@ -27,7 +27,7 @@ export default function Dashboard({
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-black">🏆 실시간 골드 현황</h1>
+      <h1 className="text-xl font-black">🏆 실시간 풍산토큰 현황</h1>
 
       {/* 팀 합산 비교 바 */}
       <div className="space-y-3">
@@ -62,7 +62,7 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* 팀별 멤버 골드 */}
+      {/* 팀별 멤버 풍산토큰 */}
       <div className="grid grid-cols-1 gap-4">
         {teamData.map(({ team, members }) => (
           <div

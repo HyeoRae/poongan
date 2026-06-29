@@ -45,7 +45,7 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
         className="w-full rounded-xl border border-border bg-card px-4 py-3 text-base outline-none focus:border-gold"
         type="number"
         min={1}
-        placeholder="베팅 골드"
+        placeholder="베팅 풍산토큰"
         value={bet}
         onChange={(e) => setBet(e.target.value)}
       />
@@ -105,7 +105,7 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
       </section>
 
       <p className="text-center text-[11px] text-white/30">
-        도박은 재미로! 골드는 잃을 수 있습니다 😈
+        도박은 재미로! 풍산토큰는 잃을 수 있습니다 😈
       </p>
     </div>
   );

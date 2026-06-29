@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Dashboard from "@/components/Dashboard";
+import EnableNotifications from "@/components/EnableNotifications";
 import type { Profile, Team } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,9 +13,12 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <Dashboard
-      initialProfiles={(profiles as Profile[]) ?? []}
-      teams={(teams as Team[]) ?? []}
-    />
+    <div className="space-y-5">
+      <Dashboard
+        initialProfiles={(profiles as Profile[]) ?? []}
+        teams={(teams as Team[]) ?? []}
+      />
+      <EnableNotifications />
+    </div>
   );
 }

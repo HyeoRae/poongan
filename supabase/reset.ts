@@ -1,7 +1,7 @@
 /**
  * 초기화 스크립트 — 모든 계정과 테스트 데이터를 깨끗이 지운다.
  *
- * 지우는 것: 전체 Auth 계정(→ profiles 연쇄삭제), 골드 거래내역(transactions),
+ * 지우는 것: 전체 Auth 계정(→ profiles 연쇄삭제), 풍산토큰 거래내역(transactions),
  *            게임기록(game_plays), 구매내역(purchases), 배정식 상태(draw_state) 초기화.
  * 남기는 것: 팀(teams), 일정(schedule), 상점아이템(shop_items).
  *

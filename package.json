@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx supabase/seed.ts",
+    "seed:schedule": "tsx supabase/seedSchedule.ts",
     "reset": "tsx supabase/reset.ts"
   },
   "dependencies": {
@@ -17,13 +18,15 @@
     "canvas-confetti": "^1.9.4",
     "next": "^15.5.19",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "dotenv": "^16.4.7",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.2",

@@ -1,0 +1,19 @@
+{
+  "name": "제 4회 풍계모 여름여행",
+  "short_name": "풍계모여행",
+  "description": "통영-거제 2박3일 여행앱",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0b12",
+  "theme_color": "#0b0b12",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

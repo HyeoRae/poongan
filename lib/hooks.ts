@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile, DrawState } from "@/lib/types";
 
-// 내 골드 잔액을 실시간 구독 (TopBar 등에서 사용)
+// 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
 export function useMyGold(userId: string, initial: number) {
   const [gold, setGold] = useState(initial);
 
@@ -35,7 +35,7 @@ export function useMyGold(userId: string, initial: number) {
   return gold;
 }
 
-// 전체 프로필을 실시간 구독 (대시보드 — 팀/멤버 골드 변동 반영)
+// 전체 프로필을 실시간 구독 (대시보드 — 팀/멤버 풍산토큰 변동 반영)
 export function useProfilesRealtime(initial: Profile[]) {
   const [profiles, setProfiles] = useState<Profile[]>(initial);
 
