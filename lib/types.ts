@@ -138,3 +138,65 @@ export type AppSettings = {
   is_public: boolean;
   updated_at: string;
 };
+
+// ---------- 섯다 ----------
+export type SutdaStatus = "waiting" | "betting" | "showdown" | "closed";
+
+export type SutdaRoom = {
+  id: number;
+  name: string;
+  created_by: string;
+  status: SutdaStatus;
+  ante: number;
+  pot: number;
+  current_bet: number;
+  current_turn: string | null;
+  turn_deadline: string | null;
+  dealer: string | null;
+  hand_no: number;
+  betting_round: number;
+  to_act_remaining: number;
+  redeal_used: boolean;
+  last_result: SutdaResult | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SutdaResult = {
+  winners?: string[];
+  winner_id?: string;
+  pot: number;
+  best?: number;
+  reason: "fold" | "showdown";
+};
+
+export type SutdaPlayer = {
+  room_id: number;
+  user_id: string;
+  seat: number;
+  committed: number;
+  folded: boolean;
+  is_active: boolean;
+  in_hand: boolean;
+  revealed_card1: number | null;
+  revealed_card2: number | null;
+  revealed_rank: number | null;
+  revealed_label: string | null;
+  joined_at: string;
+  // 조인해서 채우는 표시용
+  display_name?: string;
+};
+
+export type SutdaHand = {
+  room_id: number;
+  hand_no: number;
+  user_id: string;
+  card1: number;
+  card2: number | null;
+};
+
+// 로비 목록용
+export type SutdaRoomListItem = SutdaRoom & {
+  player_count: number;
+  joined: boolean;
+};

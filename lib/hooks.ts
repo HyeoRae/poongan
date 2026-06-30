@@ -91,6 +91,51 @@ export function useGamesRealtime(onChange: () => void) {
   }, []);
 }
 
+// 섯다 로비 — sutda_rooms 변동 시 onChange (보통 router.refresh)
+export function useSutdaLobby(onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fire = () => cb.current();
+    const channel = supabase
+      .channel("sutda-lobby")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sutda_rooms" }, fire)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+}
+
+// 섯다 방 — 해당 방의 rooms/players 변동 시 onChange (보통 router.refresh)
+export function useSutdaRoom(roomId: number, onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fire = () => cb.current();
+    const channel = supabase
+      .channel(`sutda-room-${roomId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sutda_rooms", filter: `id=eq.${roomId}` },
+        fire
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sutda_players", filter: `room_id=eq.${roomId}` },
+        fire
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId]);
+}
+
 // 팀 배정식 상태(draw_state id=1) 실시간 구독 — 전원 동기화
 export function useDrawState(initial: DrawState) {
   const [draw, setDraw] = useState<DrawState>(initial);

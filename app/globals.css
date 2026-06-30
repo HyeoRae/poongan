@@ -39,3 +39,18 @@ button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* 섯다 — 카드 한 장씩 깔리는 딜링 애니메이션 */
+@keyframes sutda-deal {
+  0% {
+    opacity: 0;
+    transform: translateY(-22px) rotate(-8deg) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0) scale(1);
+  }
+}
+.sutda-deal {
+  animation: sutda-deal 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

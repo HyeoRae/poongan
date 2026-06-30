@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="316" height="485" viewBox="0 0 316 485">
+  <defs>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <circle cx="14" cy="14" r="3.2" fill="#ffd84d" opacity="0.45"/>
+    </pattern>
+  </defs>
+  <rect x="6" y="6" width="304" height="473" rx="22" fill="#b21f2d"/>
+  <rect x="6" y="6" width="304" height="473" rx="22" fill="url(#dots)"/>
+  <rect x="22" y="22" width="272" height="441" rx="14" fill="none" stroke="#ffd84d" stroke-width="4"/>
+  <circle cx="158" cy="242.5" r="78" fill="#8c1722" stroke="#ffd84d" stroke-width="4"/>
+  <text x="158" y="284" font-family="'Noto Sans KR','Malgun Gothic',sans-serif" font-size="96" font-weight="900" text-anchor="middle" fill="#ffd84d">花</text>
+</svg>

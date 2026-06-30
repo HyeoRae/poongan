@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { playCoinflip, playDice, playRoulette } from "@/app/(app)/gamble/actions";
 
 export default function Gamble({ initialGold }: { initialGold: number }) {
@@ -52,6 +53,18 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
     <div className="space-y-6">
       <h1 className="text-xl font-black">🎰 풍산 카지노</h1>
       <p className="text-xs text-white/50">베팅액을 정하고 게임을 선택하세요.</p>
+
+      {/* 섯다 입장 */}
+      <Link
+        href="/sutda"
+        className="flex items-center justify-between rounded-2xl border border-gold/40 bg-gradient-to-r from-gold/15 to-transparent p-4"
+      >
+        <div>
+          <div className="font-black">🃏 섯다 (실시간 대전)</div>
+          <div className="text-xs text-white/50">참가자끼리 풍산토큰 걸고 맞짱!</div>
+        </div>
+        <span className="text-gold">→</span>
+      </Link>
 
       <input
         className="w-full rounded-xl border border-border bg-card px-4 py-3 text-base outline-none focus:border-gold"
