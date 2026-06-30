@@ -1,11 +1,55 @@
-/* 풍계모 여행앱 서비스워커 — 웹 푸시 수신 + 클릭 처리 */
+/* 풍계모 여행앱 서비스워커 — 웹 푸시 수신 + 클릭 처리 + 오프라인 폴백 */
 
-self.addEventListener("install", () => {
+const CACHE = "poongsan-v1";
+const PRECACHE = ["/offline.html", "/icon.svg", "/manifest.webmanifest"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      // 과거 버전 캐시 정리
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+      await self.clients.claim();
+    })()
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+
+  // GET 외(POST 등)·타 출처는 그대로 통과 — Supabase/실시간/거래 무결성 보호
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // 페이지 이동: network-first → 실패 시 오프라인 폴백
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline.html"))
+    );
+    return;
+  }
+
+  // 정적 에셋(_next/static, 아이콘 등): stale-while-revalidate
+  if (url.pathname.startsWith("/_next/static") || PRECACHE.includes(url.pathname)) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const network = fetch(request)
+          .then((res) => {
+            if (res && res.ok) cache.put(request, res.clone());
+            return res;
+          })
+          .catch(() => cached);
+        return cached || network;
+      })
+    );
+  }
 });
 
 self.addEventListener("push", (event) => {

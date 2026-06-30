@@ -1,18 +1,37 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+const title = "제 4회 풍계모 여름여행";
+const description = "통영-거제 2박3일 · 풍산토큰 대항전 🏝️";
+
 export const metadata: Metadata = {
-  title: "제 4회 풍계모 여름여행",
-  description: "통영-거제편",
+  metadataBase: new URL(siteUrl),
+  title,
+  description,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "풍계모여행",
   },
-  icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+  // 아이콘은 app/icon.svg · app/apple-icon.svg · app/favicon.ico 컨벤션으로 자동 주입
+  openGraph: {
+    title,
+    description,
+    url: "/",
+    siteName: title,
+    type: "website",
+    locale: "ko_KR",
+    // 이미지는 app/opengraph-image.tsx 가 자동으로 og:image 로 연결됨
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
   },
 };
 

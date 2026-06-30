@@ -5,6 +5,7 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import DrawCeremony from "@/components/DrawCeremony";
 import NotificationGate from "@/components/NotificationGate";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import type { DrawState } from "@/lib/types";
 
 const IDLE_DRAW: DrawState = {
@@ -57,6 +58,7 @@ export default async function AppLayout({
       <BottomNav isAdmin={isAdmin} />
       <DrawCeremony isAdmin={isAdmin} initial={draw} />
       <NotificationGate />
+      <ServiceWorkerRegister />
     </div>
   );
 }
