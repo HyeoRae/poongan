@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSutdaLobby } from "@/lib/hooks";
 import { createRoom, joinRoom } from "@/app/(app)/sutda/actions";
 import type { SutdaRoomListItem } from "@/lib/types";
+import Spinner from "@/components/Spinner";
 
 const STATUS_LABEL: Record<string, string> = {
   waiting: "대기 중",
@@ -93,8 +94,9 @@ export default function Sutda({
               <button
                 disabled={pending}
                 onClick={make}
-                className="rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
               >
+                {pending && <Spinner />}
                 만들기
               </button>
               <button
@@ -158,8 +160,9 @@ export default function Sutda({
                 <button
                   disabled={pending}
                   onClick={() => join(r.id)}
-                  className="shrink-0 rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50"
+                  className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-gold px-4 py-2 text-sm font-bold text-gold disabled:opacity-50"
                 >
+                  {pending && <Spinner />}
                   참가
                 </button>
               ) : (

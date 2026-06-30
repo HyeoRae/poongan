@@ -75,6 +75,7 @@ export default function SutdaRoomView({
   // 파생값
   const myPlayer = players.find((p) => p.user_id === me.id);
   const myCommitted = myPlayer?.committed ?? 0;
+  const leavePending = !!myPlayer?.leave_pending;
   const isBetting = room.status === "betting";
   const isMyTurn = seated && isBetting && room.current_turn === me.id && !myPlayer?.folded;
   const callCost = Math.max(room.current_bet - myCommitted, 0);
@@ -133,6 +134,28 @@ export default function SutdaRoomView({
       alive = false;
     };
   }, [revealAll, me.isAdmin, room.id, room.hand_no, room.status]);
+
+  // 나가기 예약 → 판이 끝나면(베팅 종료) 실제로 나가고 로비로
+  const leftRef = useRef(false);
+  useEffect(() => {
+    if (seated && leavePending && !isBetting && !leftRef.current) {
+      leftRef.current = true;
+      leaveRoom(room.id).finally(() => router.push("/sutda"));
+    }
+  }, [seated, leavePending, isBetting, room.id, router]);
+
+  // 방 나가기: 판 중엔 예약 토글(머무름), 그 외엔 즉시 퇴장 후 로비로
+  function handleLeave() {
+    if (isBetting && myPlayer?.in_hand) {
+      run(() => leaveRoom(room.id));
+      return;
+    }
+    setMsg(null);
+    startTransition(async () => {
+      await leaveRoom(room.id);
+      router.push("/sutda");
+    });
+  }
 
   function run(fn: () => Promise<{ ok: boolean; message: string }>) {
     setMsg(null);
@@ -442,15 +465,30 @@ export default function SutdaRoomView({
         </div>
       )}
 
+      {/* 나가기 예약 안내 */}
+      {seated && leavePending && isBetting && (
+        <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2.5 text-center text-sm text-amber-200">
+          🚪 이 판이 끝나면 로비로 나갑니다 (아래 버튼으로 취소)
+        </div>
+      )}
+
       {/* 하단 액션 */}
       <div className="flex gap-2 pt-2">
         {seated && (
           <button
             disabled={pending}
-            onClick={() => run(() => leaveRoom(room.id))}
-            className="flex-1 rounded-xl border border-border py-2.5 text-sm text-white/60 disabled:opacity-50"
+            onClick={handleLeave}
+            className={`flex-1 rounded-xl border py-2.5 text-sm disabled:opacity-50 ${
+              leavePending
+                ? "border-amber-400/50 text-amber-200"
+                : "border-border text-white/60"
+            }`}
           >
-            방 나가기
+            {leavePending
+              ? "나가기 예약됨 · 취소"
+              : isBetting && myPlayer?.in_hand
+              ? "방 나가기 (판 끝나면)"
+              : "방 나가기"}
           </button>
         )}
         {isHost && (

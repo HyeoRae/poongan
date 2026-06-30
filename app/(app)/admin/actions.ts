@@ -336,6 +336,10 @@ export async function startDraw(): Promise<ActionResult> {
   const { error: bErr } = await supabase.rpc("build_teams", { p_force: true });
   if (bErr) return { ok: false, message: bErr.message };
 
+  // 1-2) 역할(스파이) 랜덤 배정 — 팀이 섞이는 동시에 새로 배정 (정체는 비밀)
+  const { error: rErr } = await supabase.rpc("assign_roles", { p_force: true });
+  if (rErr) return { ok: false, message: rErr.message };
+
   // 2) 배정 결과 + 팀 정보 읽기
   const [{ data: players }, { data: teams }] = await Promise.all([
     supabase.from("profiles").select("*").eq("role", "player"),

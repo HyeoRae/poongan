@@ -198,6 +198,9 @@ export default function DrawCeremony({
         )}
       </div>
 
+      {/* 역할 카드 분배 연출 (배정 완료 후, 정체는 비표시) */}
+      {draw.status === "done" && <RoleDeal count={total} muted={muted} />}
+
       {/* 관리자 제어 / 참가자 안내 */}
       <div className="px-5 pb-7 pt-3">
         {isAdmin ? (
@@ -232,6 +235,151 @@ export default function DrawCeremony({
           100% {
             transform: scale(1);
             opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ---------- 역할 카드 분배 연출 ----------
+// done 직후: 중앙 덱 셔플 → 양 팀으로 카드가 날아가 안착 → "폰에서 확인" 안내.
+// 전부 뒷면(cosmetic)이라 정체는 드러나지 않는다.
+const DEAL_INTRO_MS = 400;
+const DEAL_SHUFFLE_MS = 900;
+const DEAL_STAGGER_MS = 110;
+
+function RoleDeal({ count, muted }: { count: number; muted: boolean }) {
+  const [phase, setPhase] = useState<"intro" | "shuffle" | "deal" | "outro">(
+    "intro"
+  );
+  const [dealt, setDealt] = useState(false);
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  useEffect(() => {
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setPhase("outro");
+      setDealt(true);
+      return;
+    }
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const dealStart = DEAL_INTRO_MS + DEAL_SHUFFLE_MS;
+
+    timers.push(setTimeout(() => setPhase("shuffle"), DEAL_INTRO_MS));
+    timers.push(
+      setTimeout(() => {
+        setPhase("deal");
+        setDealt(true);
+      }, dealStart)
+    );
+    // 카드가 한 장씩 안착하는 박자에 맞춘 소프트 비프
+    for (let k = 0; k < count; k++) {
+      timers.push(
+        setTimeout(
+          () => beep(520 + k * 14, 0.04, mutedRef.current),
+          dealStart + 250 + k * DEAL_STAGGER_MS
+        )
+      );
+    }
+    timers.push(
+      setTimeout(
+        () => setPhase("outro"),
+        dealStart + count * DEAL_STAGGER_MS + 500
+      )
+    );
+
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const half = Math.ceil(count / 2);
+  const cards = Array.from({ length: count }, (_, i) => {
+    const isLeft = i < half;
+    const idx = isLeft ? i : i - half;
+    const rows = isLeft ? half : count - half;
+    const x = isLeft ? 24 : 76; // %
+    const y = rows <= 1 ? 48 : 30 + idx * (40 / (rows - 1)); // 30%~70%
+    return { x, y, delay: idx * DEAL_STAGGER_MS };
+  });
+
+  const caption =
+    phase === "outro"
+      ? "각자 폰에서 카드를 확인하세요! 📱"
+      : phase === "deal"
+      ? "역할 배정 중..."
+      : "🎴 역할 배정";
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
+      {/* 약한 암전 */}
+      <div
+        className="absolute inset-0 bg-black/45 transition-opacity duration-500"
+        style={{ opacity: phase === "outro" ? 0.15 : 0.45 }}
+      />
+
+      <p
+        className="absolute left-0 right-0 top-[14%] text-center text-xl font-black text-gold transition-all duration-500"
+        style={{ textShadow: "0 0 18px rgba(245,197,66,0.5)" }}
+      >
+        {caption}
+      </p>
+
+      {cards.map((c, i) => (
+        <div
+          key={i}
+          className={`roledeal-card ${phase === "shuffle" ? "is-shuffle" : ""}`}
+          style={{
+            left: dealt ? `${c.x}%` : "50%",
+            top: dealt ? `${c.y}%` : "46%",
+            transitionDelay: `${dealt ? c.delay : 0}ms`,
+            zIndex: 30 - i,
+            // 안착 시 살짝 기울기, 셔플 중엔 스택
+            transform: dealt
+              ? `translate(-50%, -50%) rotate(${(i % 2 ? 1 : -1) * 5}deg)`
+              : `translate(-50%, -50%) rotate(${(i - count / 2) * 2}deg)`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/role-cards/back.svg"
+            alt=""
+            draggable={false}
+            className="h-full w-full select-none object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]"
+          />
+        </div>
+      ))}
+
+      <style jsx>{`
+        .roledeal-card {
+          position: absolute;
+          width: 52px;
+          aspect-ratio: 300 / 420;
+          transition: left 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+            top 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+            transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .roledeal-card.is-shuffle {
+          animation: riffle 0.18s ease-in-out infinite alternate;
+        }
+        @keyframes riffle {
+          from {
+            transform: translate(-58%, -50%) rotate(-8deg);
+          }
+          to {
+            transform: translate(-42%, -50%) rotate(8deg);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .roledeal-card {
+            transition: none;
+          }
+          .roledeal-card.is-shuffle {
+            animation: none;
           }
         }
       `}</style>

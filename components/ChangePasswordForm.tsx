@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { changePassword } from "@/app/change-password/actions";
+import Spinner from "@/components/Spinner";
 
 export default function ChangePasswordForm({
   displayName,
@@ -68,8 +69,9 @@ export default function ChangePasswordForm({
           <button
             type="submit"
             disabled={pending || !pw || !pw2}
-            className="w-full rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
           >
+            {pending && <Spinner />}
             {pending ? "변경 중..." : "비밀번호 변경하고 시작하기"}
           </button>
         </form>

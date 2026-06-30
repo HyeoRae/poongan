@@ -37,6 +37,7 @@ create table if not exists public.sutda_players (
   folded         boolean not null default false,
   is_active      boolean not null default true,  -- 방에 남아있고 이번 판 참여
   in_hand        boolean not null default false, -- 이번 판에 패를 받았는지
+  leave_pending  boolean not null default false, -- 나가기 예약(이 판 끝나면 로비로)
   revealed_card1 smallint,
   revealed_card2 smallint,
   revealed_rank  int,
@@ -58,6 +59,7 @@ create table if not exists public.sutda_hands (
 
 -- 기존 DB 보정(재실행 안전)
 alter table public.sutda_rooms add column if not exists betting_round int not null default 0;
+alter table public.sutda_players add column if not exists leave_pending boolean not null default false;
 alter table public.sutda_hands alter column card2 drop not null;
 
 -- ---------- 족보 헬퍼 ----------
@@ -425,8 +427,9 @@ begin
   end if;
 
   if exists (select 1 from public.sutda_players where room_id = p_room and user_id = v_uid) then
-    -- 이미 참가 → 재활성화
-    update public.sutda_players set is_active = true where room_id = p_room and user_id = v_uid;
+    -- 이미 참가 → 재활성화(나가기 예약 해제)
+    update public.sutda_players set is_active = true, leave_pending = false
+      where room_id = p_room and user_id = v_uid;
     return;
   end if;
 
@@ -439,6 +442,9 @@ end;
 $$;
 
 -- 방 나가기
+--  · 판 진행 중(betting + 이번 판 참여): 즉시 다이 대신 "나가기 예약" 토글
+--    → 이 판은 끝까지 치고, 판이 끝나면(쇼다운) 클라이언트가 다시 호출해 실제로 나간다.
+--  · 그 외(대기/결과): 즉시 퇴장.
 create or replace function public.sutda_leave_room(p_room int)
 returns void
 language plpgsql security definer set search_path = public
@@ -446,24 +452,25 @@ as $$
 declare
   v_uid uuid := auth.uid();
   v_room record;
+  v_me   record;
   v_new_host uuid;
 begin
   select * into v_room from public.sutda_rooms where id = p_room for update;
   if not found then return; end if;
 
-  if v_room.status = 'betting' then
-    -- 판 중 이탈 → 다이 처리
+  select * into v_me from public.sutda_players where room_id = p_room and user_id = v_uid;
+  if not found then return; end if;
+
+  -- 판 진행 중이고 이번 판에 참여 중이면 → 예약 토글(다이 안 함)
+  if v_room.status = 'betting' and v_me.in_hand then
     update public.sutda_players
-      set folded = true, is_active = false
+      set leave_pending = not leave_pending
       where room_id = p_room and user_id = v_uid;
-    -- 본인 턴이었으면 진행
-    if v_room.current_turn = v_uid then
-      update public.sutda_rooms set to_act_remaining = greatest(to_act_remaining - 1, 0) where id = p_room;
-      perform public._sutda_advance(p_room);
-    end if;
-  else
-    delete from public.sutda_players where room_id = p_room and user_id = v_uid;
+    return;
   end if;
+
+  -- 즉시 퇴장
+  delete from public.sutda_players where room_id = p_room and user_id = v_uid;
 
   -- 호스트 이양 / 빈 방 종료
   if v_room.created_by = v_uid then
@@ -505,6 +512,9 @@ begin
   if (select count(*) from public.sutda_players where room_id = p_room and is_active) < 2 then
     raise exception '2명 이상이어야 시작할 수 있습니다.';
   end if;
+
+  -- 나가기 예약자는 이번 판부터 제외(안전망)
+  update public.sutda_players set is_active = false where room_id = p_room and leave_pending;
 
   -- 이전 판 상태 초기화
   update public.sutda_players

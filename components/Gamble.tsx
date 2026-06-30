@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { playCoinflip, playDice, playRoulette } from "@/app/(app)/gamble/actions";
+import Spinner from "@/components/Spinner";
 
 export default function Gamble({ initialGold }: { initialGold: number }) {
   const router = useRouter();
@@ -11,15 +12,18 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
   const [bet, setBet] = useState("");
   const [log, setLog] = useState<string | null>(null);
   const [flash, setFlash] = useState<"win" | "lose" | null>(null);
+  const [active, setActive] = useState<string | null>(null);
 
   function done(win: boolean | undefined, text: string) {
     setLog(text);
     setFlash(win ? "win" : "lose");
+    setActive(null);
     router.refresh();
   }
 
   function coin(choice: "front" | "back") {
     setLog(null);
+    setActive(`coin-${choice}`);
     startTransition(async () => {
       const r = await playCoinflip(Number(bet), choice);
       if (!r.ok) return done(undefined, r.message ?? "오류");
@@ -30,6 +34,7 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
 
   function dice(guess: number) {
     setLog(null);
+    setActive(`dice-${guess}`);
     startTransition(async () => {
       const r = await playDice(Number(bet), guess);
       if (!r.ok) return done(undefined, r.message ?? "오류");
@@ -39,6 +44,7 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
 
   function roulette(choice: string, labelOf: string) {
     setLog(null);
+    setActive(`roul-${choice}`);
     startTransition(async () => {
       const r = await playRoulette(Number(bet), choice);
       if (!r.ok) return done(undefined, r.message ?? "오류");
@@ -97,15 +103,17 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
           <button
             disabled={pending}
             onClick={() => coin("front")}
-            className="rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
           >
+            {active === "coin-front" && <Spinner />}
             앞면
           </button>
           <button
             disabled={pending}
             onClick={() => coin("back")}
-            className="rounded-xl border border-gold py-3 font-bold text-gold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-3 font-bold text-gold disabled:opacity-50"
           >
+            {active === "coin-back" && <Spinner />}
             뒷면
           </button>
         </div>
@@ -121,8 +129,9 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
               key={n}
               disabled={pending}
               onClick={() => dice(n)}
-              className="rounded-xl border border-border py-3 text-lg font-bold disabled:opacity-50 hover:border-gold"
+              className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-lg font-bold disabled:opacity-50 hover:border-gold"
             >
+              {active === `dice-${n}` && <Spinner />}
               {n}
             </button>
           ))}
@@ -139,29 +148,33 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
           <button
             disabled={pending}
             onClick={() => roulette("low", "1-5")}
-            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
+            {active === "roul-low" && <Spinner />}
             언더 1-5 (2배)
           </button>
           <button
             disabled={pending}
             onClick={() => roulette("high", "6-10")}
-            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
+            {active === "roul-high" && <Spinner />}
             오버 6-10 (2배)
           </button>
           <button
             disabled={pending}
             onClick={() => roulette("odd", "홀")}
-            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
+            {active === "roul-odd" && <Spinner />}
             홀 (2배)
           </button>
           <button
             disabled={pending}
             onClick={() => roulette("even", "짝")}
-            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
+            {active === "roul-even" && <Spinner />}
             짝 (2배)
           </button>
         </div>
@@ -172,8 +185,9 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
               key={n}
               disabled={pending}
               onClick={() => roulette(String(n), String(n))}
-              className="rounded-xl border border-border py-2.5 font-bold disabled:opacity-50 hover:border-gold"
+              className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 font-bold disabled:opacity-50 hover:border-gold"
             >
+              {active === `roul-${n}` && <Spinner />}
               {n}
             </button>
           ))}

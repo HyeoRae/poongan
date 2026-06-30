@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { transferGold } from "@/app/(app)/wallet/actions";
 import type { Profile, Transaction } from "@/lib/types";
+import Spinner from "@/components/Spinner";
 
 const TX_LABEL: Record<string, string> = {
   admin_grant: "관리자 지급",
@@ -95,8 +96,9 @@ export default function Wallet({
           {msg && <p className="text-sm text-gold">{msg}</p>}
           <button
             disabled={pending}
-            className="w-full rounded-xl bg-gold py-2.5 font-bold text-black disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-2.5 font-bold text-black disabled:opacity-50"
           >
+            {pending && <Spinner />}
             {pending ? "전송 중..." : "보내기"}
           </button>
         </form>

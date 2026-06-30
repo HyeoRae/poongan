@@ -139,6 +139,16 @@ export type AppSettings = {
   updated_at: string;
 };
 
+// ---------- 비밀 역할 (스파이) ----------
+// 현재는 'member' | 'spy' 2종. 추후 역할이 추가되면 여기에 값을 늘린다.
+export type PlayerRoleKind = "member" | "spy";
+
+export type PlayerRole = {
+  user_id: string;
+  role: PlayerRoleKind;
+  revealed: boolean;
+};
+
 // ---------- 섯다 ----------
 export type SutdaStatus = "waiting" | "betting" | "showdown" | "closed";
 
@@ -178,6 +188,7 @@ export type SutdaPlayer = {
   folded: boolean;
   is_active: boolean;
   in_hand: boolean;
+  leave_pending: boolean;
   revealed_card1: number | null;
   revealed_card2: number | null;
   revealed_rank: number | null;

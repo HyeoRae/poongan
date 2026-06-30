@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { placeBet } from "@/app/(app)/games/actions";
 import { useGamesRealtime } from "@/lib/hooks";
 import type { PoolGameView } from "@/lib/types";
+import Spinner from "@/components/Spinner";
 
 const STATUS_META: Record<
   string,
@@ -157,8 +158,9 @@ function GameCard({ game }: { game: PoolGameView }) {
           <button
             disabled={pending}
             onClick={submit}
-            className="shrink-0 rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
           >
+            {pending && <Spinner />}
             베팅
           </button>
         </div>

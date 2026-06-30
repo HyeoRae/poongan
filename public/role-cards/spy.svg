@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" width="300" height="420" role="img" aria-label="스파이 카드">
+  <defs>
+    <linearGradient id="bgSpy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a0d10"/>
+      <stop offset="1" stop-color="#0a0608"/>
+    </linearGradient>
+    <linearGradient id="redSpy" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff6b6b"/>
+      <stop offset="0.5" stop-color="#e11d2e"/>
+      <stop offset="1" stop-color="#7a0d16"/>
+    </linearGradient>
+    <radialGradient id="glowSpy" cx="50%" cy="42%" r="55%">
+      <stop offset="0" stop-color="#e11d2e" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#e11d2e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="6" y="6" width="288" height="408" rx="22" fill="url(#bgSpy)" stroke="url(#redSpy)" stroke-width="3"/>
+  <rect x="150" y="210" width="0" height="0" />
+  <ellipse cx="150" cy="185" rx="120" ry="120" fill="url(#glowSpy)"/>
+
+  <!-- 가면(스파이) 엠블럼 -->
+  <g transform="translate(150 180)">
+    <!-- 모자 챙 -->
+    <path d="M-78 -34 Q0 -70 78 -34 Q40 -50 0 -50 Q-40 -50 -78 -34 Z" fill="url(#redSpy)"/>
+    <rect x="-58" y="-36" width="116" height="14" rx="7" fill="#1a0c0e"/>
+    <!-- 도미노 마스크 -->
+    <path d="M-70 0 Q-70 -22 -40 -22 Q-12 -22 0 -8 Q12 -22 40 -22 Q70 -22 70 0 Q70 30 40 30 Q12 30 0 16 Q-12 30 -40 30 Q-70 30 -70 0 Z" fill="#120709" stroke="url(#redSpy)" stroke-width="3"/>
+    <ellipse cx="-38" cy="2" rx="16" ry="12" fill="#e11d2e"/>
+    <ellipse cx="38" cy="2" rx="16" ry="12" fill="#e11d2e"/>
+    <ellipse cx="-38" cy="2" rx="6" ry="6" fill="#fff" fill-opacity="0.9"/>
+    <ellipse cx="38" cy="2" rx="6" ry="6" fill="#fff" fill-opacity="0.9"/>
+  </g>
+
+  <text x="150" y="320" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="46" font-weight="900" letter-spacing="2" fill="url(#redSpy)">스파이</text>
+  <text x="150" y="356" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="#ff6b6b" fill-opacity="0.8">SPY</text>
+  <text x="150" y="388" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" fill="#ffffff" fill-opacity="0.55">상대팀이 이기면 당신의 승리</text>
+</svg>

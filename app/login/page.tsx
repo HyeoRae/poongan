@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { idToEmail } from "@/lib/constants";
+import Spinner from "@/components/Spinner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,8 +59,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading || !id || !pw}
-            className="w-full rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
           >
+            {loading && <Spinner />}
             {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
