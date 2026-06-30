@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ScheduleItem } from "@/lib/types";
+import Link from "next/link";
+import type { ScheduleItem, ScheduleGameBadge } from "@/lib/types";
 
 // 일차 → 실제 날짜 (docs/schedule.md 기준, 2026년)
 const DAY_META: Record<number, { date: string; y: number; m: number; d: number }> = {
@@ -37,8 +38,22 @@ function pickActiveDay(items: ScheduleItem[], nowMs: number): number | null {
   return sorted[sorted.length - 1].it.day; // 전부 지남
 }
 
-export default function ScheduleTimeline({ items }: { items: ScheduleItem[] }) {
+export default function ScheduleTimeline({
+  items,
+  games = [],
+}: {
+  items: ScheduleItem[];
+  games?: ScheduleGameBadge[];
+}) {
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
+
+  // 일정 id → 연결된 게임 배지들
+  const gamesByItem = new Map<number, ScheduleGameBadge[]>();
+  games.forEach((g) => {
+    const arr = gamesByItem.get(g.schedule_id) ?? [];
+    arr.push(g);
+    gamesByItem.set(g.schedule_id, arr);
+  });
 
   const [selectedDay, setSelectedDay] = useState<number>(days[0]);
   // 서버 렌더(=null)와 첫 클라이언트 렌더를 일치시켜 하이드레이션 불일치를 피한다.
@@ -150,6 +165,22 @@ export default function ScheduleTimeline({ items }: { items: ScheduleItem[] }) {
                 {it.description && (
                   <p className="mt-1 text-sm text-white/70">{it.description}</p>
                 )}
+                {(gamesByItem.get(it.id) ?? []).map((g) => (
+                  <Link
+                    key={g.title}
+                    href="/games"
+                    className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-gold/40 bg-gold/10 px-2.5 py-1.5 text-xs font-semibold text-gold"
+                  >
+                    <span>
+                      {g.status === "settled"
+                        ? `🏆 ${g.title} 우승: ${g.winner_label ?? "?"}`
+                        : g.status === "locked"
+                          ? `🔒 ${g.title} · 정산 대기`
+                          : `🎮 ${g.title} · 베팅하기`}
+                    </span>
+                    <span className="opacity-60">→</span>
+                  </Link>
+                ))}
               </div>
             </li>
           );

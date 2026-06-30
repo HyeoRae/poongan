@@ -58,7 +58,7 @@ export default function Wallet({
 
       {/* 송금 / 배신 */}
       <section className="rounded-2xl border border-border bg-card p-4">
-        <h2 className="mb-3 font-bold">🤝 풍산토큰 보내기 (선물·뇌물·배신)</h2>
+        <h2 className="mb-3 font-bold">🤝 풍산토큰 보내기</h2>
         <form onSubmit={onTransfer} className="space-y-2">
           <select
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
@@ -66,11 +66,17 @@ export default function Wallet({
             onChange={(e) => setTo(e.target.value)}
           >
             <option value="">받는 사람 선택</option>
-            {others.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.display_name}
-              </option>
-            ))}
+            {others
+              .filter(
+                (o) =>
+                  o.role !== "admin" &&
+                  !o.username.toLowerCase().includes("test")
+              )
+              .map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.display_name}
+                </option>
+              ))}
           </select>
           <input
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"

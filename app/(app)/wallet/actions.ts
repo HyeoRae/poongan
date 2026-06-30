@@ -14,6 +14,21 @@ export async function transferGold(
     return { ok: false, message: "받는 사람과 1 이상의 금액을 입력하세요." };
   }
   const supabase = await createClient();
+
+  // 관리자·test 계정에게는 보낼 수 없음
+  const { data: recipient } = await supabase
+    .from("profiles")
+    .select("role, username")
+    .eq("id", toUserId)
+    .single();
+  if (
+    recipient &&
+    (recipient.role === "admin" ||
+      recipient.username.toLowerCase().includes("test"))
+  ) {
+    return { ok: false, message: "보낼 수 없는 상대입니다." };
+  }
+
   const { error } = await supabase.rpc("transfer_gold", {
     p_to: toUserId,
     p_amount: amount,

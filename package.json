@@ -9,6 +9,7 @@
     "lint": "next lint",
     "seed": "tsx supabase/seed.ts",
     "seed:schedule": "tsx supabase/seedSchedule.ts",
+    "seed:games": "tsx supabase/seedMinigames.ts",
     "reset": "tsx supabase/reset.ts"
   },
   "dependencies": {

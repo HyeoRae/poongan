@@ -49,3 +49,33 @@ export async function playDice(bet: number, guess: number): Promise<DiceResult> 
   revalidatePath("/dashboard");
   return { ok: true, ...(data as { roll: number; win: boolean; balance: number }) };
 }
+
+export type RouletteResult = {
+  ok: boolean;
+  message?: string;
+  roll?: number;
+  win?: boolean;
+  mult?: number;
+  balance?: number;
+};
+
+// choice: "low" | "high" | "odd" | "even" | "1".."10"
+export async function playRoulette(
+  bet: number,
+  choice: string
+): Promise<RouletteResult> {
+  if (!Number.isInteger(bet) || bet <= 0) {
+    return { ok: false, message: "베팅액을 입력하세요." };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("gamble_roulette", {
+    p_bet: bet,
+    p_choice: choice,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/dashboard");
+  return {
+    ok: true,
+    ...(data as { roll: number; win: boolean; mult: number; balance: number }),
+  };
+}

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { playCoinflip, playDice } from "@/app/(app)/gamble/actions";
+import { playCoinflip, playDice, playRoulette } from "@/app/(app)/gamble/actions";
 
 export default function Gamble({ initialGold }: { initialGold: number }) {
   const router = useRouter();
@@ -33,6 +33,18 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
       const r = await playDice(Number(bet), guess);
       if (!r.ok) return done(undefined, r.message ?? "오류");
       done(r.win, `🎲 결과: ${r.roll} → ${r.win ? "🎉 6배 당첨!" : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`);
+    });
+  }
+
+  function roulette(choice: string, labelOf: string) {
+    setLog(null);
+    startTransition(async () => {
+      const r = await playRoulette(Number(bet), choice);
+      if (!r.ok) return done(undefined, r.message ?? "오류");
+      done(
+        r.win,
+        `🎡 결과: ${r.roll} (${labelOf}) → ${r.win ? `🎉 ${r.mult}배 당첨!` : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`
+      );
     });
   }
 
@@ -97,6 +109,57 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
               disabled={pending}
               onClick={() => dice(n)}
               className="rounded-xl border border-border py-3 text-lg font-bold disabled:opacity-50 hover:border-gold"
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 룰렛 */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-1 font-bold">🎡 룰렛 (1~10)</h2>
+        <p className="mb-3 text-xs text-white/50">
+          짝/홀·언더/오버는 2배, 숫자 적중은 10배!
+        </p>
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <button
+            disabled={pending}
+            onClick={() => roulette("low", "1-5")}
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+          >
+            언더 1-5 (2배)
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => roulette("high", "6-10")}
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+          >
+            오버 6-10 (2배)
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => roulette("odd", "홀")}
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+          >
+            홀 (2배)
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => roulette("even", "짝")}
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+          >
+            짝 (2배)
+          </button>
+        </div>
+        <p className="mb-2 text-[11px] text-white/40">숫자 적중 (10배)</p>
+        <div className="grid grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <button
+              key={n}
+              disabled={pending}
+              onClick={() => roulette(String(n), String(n))}
+              className="rounded-xl border border-border py-2.5 font-bold disabled:opacity-50 hover:border-gold"
             >
               {n}
             </button>

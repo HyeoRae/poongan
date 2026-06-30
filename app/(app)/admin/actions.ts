@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { broadcastNotification } from "@/app/(app)/push/actions";
 import type { DrawAssignment, Profile, Team } from "@/lib/types";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -136,6 +137,183 @@ export async function setAppPublic(isPublic: boolean): Promise<ActionResult> {
     ok: true,
     message: isPublic ? "앱이 공개되었습니다! 🎉" : "앱을 비공개로 전환했습니다.",
   };
+}
+
+// ---------- 미니게임 (팟배팅) 운영 ----------
+
+// 팟배팅 게임 생성 (draft 상태). option_source='custom'이면 옵션을 함께 넣는다.
+export async function createPoolGame(
+  title: string,
+  scheduleId: number | null,
+  optionSource: "players" | "custom",
+  description: string,
+  customOptions: string[]
+): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  if (!title.trim()) return { ok: false, message: "게임 제목을 입력하세요." };
+
+  const opts = customOptions.map((s) => s.trim()).filter(Boolean);
+  if (optionSource === "custom" && opts.length < 2) {
+    return { ok: false, message: "선택지를 2개 이상 입력하세요." };
+  }
+
+  const { data: game, error } = await guard.supabase
+    .from("games")
+    .insert({
+      type: "pool",
+      title: title.trim(),
+      schedule_id: scheduleId,
+      status: "draft",
+      option_source: optionSource,
+      config: description.trim() ? { description: description.trim() } : {},
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, message: error.message };
+
+  if (optionSource === "custom") {
+    const rows = opts.map((label, i) => ({
+      game_id: game.id,
+      label,
+      sort_order: i,
+    }));
+    const { error: oErr } = await guard.supabase
+      .from("bet_options")
+      .insert(rows);
+    if (oErr) return { ok: false, message: oErr.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/games");
+  return { ok: true, message: "게임을 만들었습니다 (대기 중)." };
+}
+
+// 게임 오픈: 참가자 옵션이면 현재 player 명단으로 선택지를 채운 뒤 베팅을 연다.
+export async function openGame(gameId: number): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+
+  const { data: game } = await guard.supabase
+    .from("games")
+    .select("id, title, status, option_source")
+    .eq("id", gameId)
+    .single();
+  if (!game) return { ok: false, message: "게임을 찾을 수 없습니다." };
+  if (game.status !== "draft" && game.status !== "locked") {
+    return { ok: false, message: "지금 열 수 없는 상태입니다." };
+  }
+
+  // 참가자 옵션인데 아직 선택지가 없으면 현재 명단으로 생성
+  if (game.option_source === "players") {
+    const { data: existing } = await guard.supabase
+      .from("bet_options")
+      .select("id")
+      .eq("game_id", gameId);
+    if (!existing || existing.length === 0) {
+      const { data: players } = await guard.supabase
+        .from("profiles")
+        .select("id, display_name")
+        .eq("role", "player")
+        .order("display_name");
+      const rows = ((players as Pick<Profile, "id" | "display_name">[]) ?? []).map(
+        (p, i) => ({
+          game_id: gameId,
+          label: p.display_name,
+          ref_user_id: p.id,
+          sort_order: i,
+        })
+      );
+      if (rows.length < 2) {
+        return { ok: false, message: "참가자가 2명 이상 있어야 합니다." };
+      }
+      const { error: oErr } = await guard.supabase
+        .from("bet_options")
+        .insert(rows);
+      if (oErr) return { ok: false, message: oErr.message };
+    }
+  }
+
+  const { error } = await guard.supabase
+    .from("games")
+    .update({ status: "open" })
+    .eq("id", gameId);
+  if (error) return { ok: false, message: error.message };
+
+  // 베스트에포트 푸시 (VAPID 미설정 등 실패는 무시)
+  try {
+    await broadcastNotification(
+      `🎮 ${game.title}`,
+      "배팅이 열렸어요! 지금 참여하세요.",
+      "/games"
+    );
+  } catch {
+    /* 알림 실패는 게임 오픈에 영향 없음 */
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/games");
+  revalidatePath("/schedule");
+  return { ok: true, message: "베팅을 열었습니다!" };
+}
+
+// 베팅 마감 (정산 전 잠금)
+export async function lockGame(gameId: number): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  const { error } = await guard.supabase
+    .from("games")
+    .update({ status: "locked" })
+    .eq("id", gameId)
+    .eq("status", "open");
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/games");
+  revalidatePath("/schedule");
+  return { ok: true, message: "베팅을 마감했습니다." };
+}
+
+// 정산: 우승 선택지 지정 → 팟 자동 분배
+export async function settleGame(
+  gameId: number,
+  winningOptionId: number
+): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  if (!winningOptionId) {
+    return { ok: false, message: "우승 선택지를 골라주세요." };
+  }
+  const { data, error } = await guard.supabase.rpc("settle_pool_game", {
+    p_game: gameId,
+    p_winning_option: winningOptionId,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/games");
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  const r = data as { pot: number; refunded: boolean };
+  return {
+    ok: true,
+    message: r?.refunded
+      ? "우승 베팅이 없어 전원 환불했습니다."
+      : `정산 완료! 팟 🪙${r?.pot?.toLocaleString() ?? 0} 분배.`,
+  };
+}
+
+// 취소: 전 베팅 환불
+export async function cancelGame(gameId: number): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  const { error } = await guard.supabase.rpc("cancel_pool_game", {
+    p_game: gameId,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/games");
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  return { ok: true, message: "게임을 취소하고 전원 환불했습니다." };
 }
 
 // ---------- 팀 배정식 (실시간 드로우 쇼) ----------

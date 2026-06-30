@@ -1,7 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import AdminPanel from "@/components/AdminPanel";
-import type { Profile, Team } from "@/lib/types";
+import type {
+  Profile,
+  Team,
+  Game,
+  BetOption,
+  Bet,
+  AdminGameView,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +16,7 @@ export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: players }, { data: teams }, { data: settings }] =
+  const [{ data: players }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -18,13 +25,64 @@ export default async function AdminPage() {
         .order("display_name"),
       supabase.from("teams").select("*").order("id"),
       supabase.from("app_settings").select("is_public").eq("id", 1).single(),
+      supabase
+        .from("games")
+        .select("*")
+        .eq("type", "pool")
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("schedule")
+        .select("id, day, title")
+        .order("day")
+        .order("sort_order"),
     ]);
+
+  const games = (gamesRaw as Game[]) ?? [];
+  const gameIds = games.map((g) => g.id);
+  const schedule = (schedRaw as { id: number; day: number; title: string }[]) ?? [];
+  const schedTitle = new Map(schedule.map((s) => [s.id, s.title]));
+
+  const [{ data: optsRaw }, { data: betsRaw }] = await Promise.all([
+    supabase
+      .from("bet_options")
+      .select("*")
+      .in("game_id", gameIds.length ? gameIds : [-1])
+      .order("sort_order"),
+    supabase
+      .from("bets")
+      .select("game_id, option_id, amount")
+      .in("game_id", gameIds.length ? gameIds : [-1]),
+  ]);
+
+  const options = (optsRaw as BetOption[]) ?? [];
+  const bets = (betsRaw as Pick<Bet, "game_id" | "option_id" | "amount">[]) ?? [];
+
+  const gameViews: AdminGameView[] = games.map((g) => {
+    const gBets = bets.filter((b) => b.game_id === g.id);
+    return {
+      ...g,
+      schedule_title: g.schedule_id ? schedTitle.get(g.schedule_id) ?? null : null,
+      options: options
+        .filter((o) => o.game_id === g.id)
+        .map((o) => ({
+          ...o,
+          pot: gBets
+            .filter((b) => b.option_id === o.id)
+            .reduce((s, b) => s + b.amount, 0),
+        })),
+      total_pot: gBets.reduce((s, b) => s + b.amount, 0),
+      bet_count: gBets.length,
+    };
+  });
 
   return (
     <AdminPanel
       players={(players as Profile[]) ?? []}
       teams={(teams as Team[]) ?? []}
       isPublic={settings?.is_public ?? false}
+      games={gameViews}
+      schedule={schedule}
     />
   );
 }

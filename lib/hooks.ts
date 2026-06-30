@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile, DrawState } from "@/lib/types";
 
@@ -67,6 +67,28 @@ export function useProfilesRealtime(initial: Profile[]) {
   }, []);
 
   return profiles;
+}
+
+// 미니게임/베팅 변동 실시간 구독 — games/bets/bet_options 변경 시 onChange 호출
+// (보통 router.refresh 를 넘겨 서버 데이터를 다시 불러온다)
+export function useGamesRealtime(onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fire = () => cb.current();
+    const channel = supabase
+      .channel("games-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "games" }, fire)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bets" }, fire)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bet_options" }, fire)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 }
 
 // 팀 배정식 상태(draw_state id=1) 실시간 구독 — 전원 동기화

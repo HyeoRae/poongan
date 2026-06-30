@@ -10,16 +10,21 @@ import {
   resetUserPassword,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
-import type { Profile, Team } from "@/lib/types";
+import AdminGames from "@/components/AdminGames";
+import type { Profile, Team, AdminGameView } from "@/lib/types";
 
 export default function AdminPanel({
   players,
   teams,
   isPublic,
+  games,
+  schedule,
 }: {
   players: Profile[];
   teams: Team[];
   isPublic: boolean;
+  games: AdminGameView[];
+  schedule: { id: number; day: number; title: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -28,6 +33,7 @@ export default function AdminPanel({
   // 서브탭
   const TABS = [
     { id: "event", label: "🎲 이벤트" },
+    { id: "game", label: "🎮 게임" },
     { id: "token", label: "🪙 토큰" },
     { id: "notify", label: "🔔 알림" },
     { id: "member", label: "🔑 참가자" },
@@ -155,6 +161,8 @@ export default function AdminPanel({
       </section>
         </>
       )}
+
+      {tab === "game" && <AdminGames games={games} schedule={schedule} />}
 
       {tab === "token" && (
         <>

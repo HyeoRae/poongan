@@ -38,13 +38,74 @@ export type ScheduleItem = {
   sort_order: number;
 };
 
+export type GameType = "quiz" | "dice" | "roulette" | "highlow" | "vote" | "pool";
+export type GameStatus = "draft" | "open" | "locked" | "settled" | "cancelled";
+
+export type GameResult = {
+  winning_option: number;
+  pot: number;
+  winner_stake: number;
+};
+
 export type Game = {
   id: number;
-  type: "quiz" | "dice" | "roulette" | "highlow" | "vote";
+  type: GameType;
   title: string;
   config: Record<string, unknown>;
   is_open: boolean;
+  schedule_id: number | null;
+  status: GameStatus;
+  result: GameResult | null;
+  option_source: "custom" | "players";
   created_at: string;
+};
+
+export type BetOption = {
+  id: number;
+  game_id: number;
+  label: string;
+  ref_user_id: string | null;
+  sort_order: number;
+};
+
+export type Bet = {
+  id: number;
+  game_id: number;
+  option_id: number;
+  user_id: string;
+  amount: number;
+  payout: number;
+  created_at: string;
+};
+
+// 플레이어 화면용: 게임 + 옵션별 팟 + 내 베팅
+export type PoolOptionView = BetOption & {
+  pot: number;        // 이 선택지에 모인 총액
+  my_amount: number;  // 내가 이 선택지에 건 금액
+};
+
+export type PoolGameView = Game & {
+  schedule_title: string | null;
+  options: PoolOptionView[];
+  total_pot: number;
+  my_total: number;
+  my_payout: number;  // 정산 완료 시 내 수령액
+};
+
+// 일정 카드에 띄울 게임 배지
+export type ScheduleGameBadge = {
+  schedule_id: number;
+  title: string;
+  status: GameStatus;
+  winner_label: string | null;
+};
+
+// 관리자 운영 화면용
+export type AdminGameView = Game & {
+  schedule_title: string | null;
+  options: (BetOption & { pot: number })[];
+  total_pot: number;
+  bet_count: number;
 };
 
 // 대시보드 표시용: 팀 + 소속 멤버
