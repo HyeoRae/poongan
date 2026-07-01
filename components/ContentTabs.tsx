@@ -8,6 +8,7 @@ const tabs = [
   { href: "/games", label: "🎮 미니게임" },
   { href: "/sutda", label: "🃏 섯다" },
   { href: "/gamble", label: "🎰 도박장" },
+  { href: "/card", label: "🎴 효과카드" },
 ];
 
 export default function ContentTabs() {

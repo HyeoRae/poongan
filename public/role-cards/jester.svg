@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" width="300" height="420" role="img" aria-label="광대 카드">
+  <defs>
+    <linearGradient id="bgJes" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#231038"/>
+      <stop offset="1" stop-color="#0a0610"/>
+    </linearGradient>
+    <linearGradient id="purJes" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d8b4fe"/>
+      <stop offset="0.5" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#6b21a8"/>
+    </linearGradient>
+    <radialGradient id="glowJes" cx="50%" cy="42%" r="55%">
+      <stop offset="0" stop-color="#a855f7" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="6" y="6" width="288" height="408" rx="22" fill="url(#bgJes)" stroke="url(#purJes)" stroke-width="3"/>
+  <ellipse cx="150" cy="185" rx="120" ry="120" fill="url(#glowJes)"/>
+
+  <!-- 광대 엠블럼: 뒤집힌 왕관 + 할리퀸 모자 -->
+  <g transform="translate(150 180)">
+    <!-- 삼각 모자(방울) -->
+    <path d="M-70 6 Q-60 -60 -30 -58 L-30 6 Z" fill="url(#purJes)"/>
+    <path d="M-14 6 Q0 -74 14 6 Z" fill="#c084fc"/>
+    <path d="M70 6 Q60 -60 30 -58 L30 6 Z" fill="url(#purJes)"/>
+    <circle cx="-58" cy="-56" r="9" fill="#f5c542"/>
+    <circle cx="0" cy="-72" r="9" fill="#f5c542"/>
+    <circle cx="58" cy="-56" r="9" fill="#f5c542"/>
+    <!-- 얼굴 밴드 -->
+    <rect x="-72" y="6" width="144" height="16" rx="8" fill="#1a0c26"/>
+    <!-- 뒤집힌 왕관(역설 승리) -->
+    <g transform="translate(0 40)">
+      <path d="M-42 0 L-42 -22 L-24 -8 L0 -26 L24 -8 L42 -22 L42 0 Z" fill="url(#purJes)" transform="rotate(180)"/>
+      <circle cx="-42" cy="2" r="5" fill="#f5c542"/>
+      <circle cx="0" cy="2" r="5" fill="#f5c542"/>
+      <circle cx="42" cy="2" r="5" fill="#f5c542"/>
+    </g>
+  </g>
+
+  <text x="150" y="320" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="46" font-weight="900" letter-spacing="2" fill="url(#purJes)">광대</text>
+  <text x="150" y="356" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="#d8b4fe" fill-opacity="0.8">JESTER</text>
+  <text x="150" y="388" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" fill="#ffffff" fill-opacity="0.55">팀은 이기고, 나는 꼴찌면 승리</text>
+</svg>

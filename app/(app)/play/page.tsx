@@ -22,6 +22,12 @@ const cards = [
     title: "도박장",
     desc: "동전·주사위·룰렛으로 혼자 한탕",
   },
+  {
+    href: "/card",
+    icon: "🎴",
+    title: "효과카드 뽑기",
+    desc: "풍산토큰으로 뽑는 버프 카드 — 상시/1회용, 꽝도 있음",
+  },
 ];
 
 export default async function PlayPage() {

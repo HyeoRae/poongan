@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { transferGold } from "@/app/(app)/wallet/actions";
-import type { Profile, Transaction } from "@/lib/types";
+import type { PublicProfile, Profile, Transaction } from "@/lib/types";
 import Spinner from "@/components/Spinner";
 
 const TX_LABEL: Record<string, string> = {
@@ -13,6 +13,8 @@ const TX_LABEL: Record<string, string> = {
   transfer: "송금",
   steal: "강탈",
   shop: "상점",
+  fee: "송금 수수료",
+  gacha: "효과카드 뽑기",
 };
 
 export default function Wallet({
@@ -21,7 +23,7 @@ export default function Wallet({
   transactions,
 }: {
   me: Profile;
-  others: Profile[];
+  others: PublicProfile[];
   transactions: Transaction[];
 }) {
   const router = useRouter();
@@ -89,6 +91,9 @@ export default function Wallet({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
+          <p className="text-[11px] text-white/40">
+            ⚠️ 송금 수수료 20%가 차감됩니다. (받는 사람은 80% 수령 · 효과카드로 면제 가능)
+          </p>
           {msg && <p className="text-sm text-gold">{msg}</p>}
           <button
             disabled={pending}

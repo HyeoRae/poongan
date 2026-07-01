@@ -1,34 +1,39 @@
 "use client";
 
-import { useProfilesRealtime } from "@/lib/hooks";
+import { useTeamTotals } from "@/lib/hooks";
 import Avatar from "@/components/Avatar";
-import type { Profile, Team } from "@/lib/types";
+import type { PublicProfile, Team, TeamTotal } from "@/lib/types";
 
 export default function Dashboard({
   initialProfiles,
   teams,
+  initialTotals,
 }: {
-  initialProfiles: Profile[];
+  initialProfiles: PublicProfile[];
   teams: Team[];
+  initialTotals: TeamTotal[];
 }) {
-  const profiles = useProfilesRealtime(initialProfiles);
-  const players = profiles.filter((p) => p.role === "player");
+  // 개인 잔액은 비공개 — 팀 합산 점수만 실시간 구독.
+  const totals = useTeamTotals(initialTotals);
+  const players = initialProfiles.filter((p) => p.role === "player" && !p.is_bot);
+  const totalOf = (teamId: number) =>
+    totals.find((t) => t.team_id === teamId)?.total ?? 0;
 
-  const teamData = teams.map((t) => {
-    const members = players
-      .filter((p) => p.team_id === t.id)
-      .sort((a, b) => b.gold_balance - a.gold_balance);
-    const total = members.reduce((s, m) => s + m.gold_balance, 0);
-    return { team: t, members, total };
-  });
+  const teamData = teams.map((t) => ({
+    team: t,
+    members: players.filter((p) => p.team_id === t.id),
+    total: totalOf(t.id),
+  }));
 
   const unassigned = players.filter((p) => p.team_id === null);
   const maxTotal = Math.max(1, ...teamData.map((t) => t.total));
-  const leader = [...players].sort((a, b) => b.gold_balance - a.gold_balance)[0];
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-black">🏆 실시간 풍산토큰 현황</h1>
+      <h1 className="text-xl font-black">🏆 팀 대항전 현황</h1>
+      <p className="text-xs text-white/50">
+        개인 보유 토큰은 비밀입니다. 공개되는 건 <b>팀 합산 점수</b>뿐이에요.
+      </p>
 
       {/* 팀 합산 비교 바 */}
       <div className="space-y-3">
@@ -55,15 +60,7 @@ export default function Dashboard({
         ))}
       </div>
 
-      {/* MVP 배지 */}
-      {leader && leader.gold_balance > 0 && (
-        <div className="rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm">
-          👑 현재 1위 <b>{leader.display_name}</b> · 🪙{" "}
-          {leader.gold_balance.toLocaleString()}
-        </div>
-      )}
-
-      {/* 팀별 멤버 풍산토큰 */}
+      {/* 팀별 멤버 (잔액 비공개 — 명단만) */}
       <div className="grid grid-cols-1 gap-4">
         {teamData.map(({ team, members }) => (
           <div
@@ -77,26 +74,24 @@ export default function Dashboard({
                 style={{ backgroundColor: team.color }}
               />
               <span className="font-bold">{team.name}</span>
+              <span className="text-xs text-white/40">· {members.length}명</span>
             </div>
             {members.length === 0 ? (
               <p className="text-sm text-white/40">아직 멤버가 없습니다</p>
             ) : (
-              <ul className="space-y-2">
-                {members.map((m, i) => (
-                  <li key={m.id} className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-sm">
-                      <span className="w-5 text-center text-white/40">{i + 1}</span>
-                      <Avatar
-                        url={m.avatar_url}
-                        name={m.display_name}
-                        color={team.color}
-                        size={28}
-                      />
-                      {m.display_name}
-                    </span>
-                    <span className="font-bold tabular-nums text-gold">
-                      {m.gold_balance.toLocaleString()}
-                    </span>
+              <ul className="flex flex-wrap gap-2">
+                {members.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-2 rounded-full border border-border bg-background px-2.5 py-1 text-sm"
+                  >
+                    <Avatar
+                      url={m.avatar_url}
+                      name={m.display_name}
+                      color={team.color}
+                      size={24}
+                    />
+                    {m.display_name}
                   </li>
                 ))}
               </ul>

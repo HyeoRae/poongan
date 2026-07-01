@@ -10,7 +10,8 @@
     "seed": "tsx supabase/seed.ts",
     "seed:schedule": "tsx supabase/seedSchedule.ts",
     "seed:games": "tsx supabase/seedMinigames.ts",
-    "reset": "tsx supabase/reset.ts"
+    "reset": "tsx supabase/reset.ts",
+    "test:flows": "tsx supabase/testFlows.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

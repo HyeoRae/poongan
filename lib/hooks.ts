@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, DrawState } from "@/lib/types";
+import type { Profile, DrawState, TeamTotal } from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
 export function useMyGold(userId: string, initial: number) {
@@ -67,6 +67,77 @@ export function useProfilesRealtime(initial: Profile[]) {
   }, []);
 
   return profiles;
+}
+
+// 팀 합산 점수(team_totals) 실시간 구독 — 대시보드 팀 대결 바.
+// (개인 잔액은 비공개라 profiles 대신 이 집계 테이블을 구독한다.)
+export function useTeamTotals(initial: TeamTotal[]) {
+  const [totals, setTotals] = useState<TeamTotal[]>(initial);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("team-totals")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "team_totals" },
+        (payload) => {
+          if (payload.eventType === "DELETE") return;
+          const row = payload.new as TeamTotal;
+          setTotals((prev) => {
+            const exists = prev.some((t) => t.team_id === row.team_id);
+            return exists
+              ? prev.map((t) => (t.team_id === row.team_id ? row : t))
+              : [...prev, row];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return totals;
+}
+
+// 내 효과카드 보유 변동 실시간 — player_effect_cards 변경 시 onChange(보통 router.refresh).
+export function useMyCardsRealtime(userId: string, onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fire = () => cb.current();
+    const channel = supabase
+      .channel(`my-cards-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "player_effect_cards",
+          filter: `user_id=eq.${userId}`,
+        },
+        fire
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "player_gacha",
+          filter: `user_id=eq.${userId}`,
+        },
+        fire
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 }
 
 // 미니게임/베팅 변동 실시간 구독 — games/bets/bet_options 변경 시 onChange 호출

@@ -71,12 +71,8 @@ export default async function SutdaPage({
     .order("seat");
   const players = (playersRaw as SutdaPlayer[]) ?? [];
 
-  // 표시 이름 매핑
-  const uids = players.map((p) => p.user_id);
-  const { data: profsRaw } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", uids.length ? uids : ["00000000-0000-0000-0000-000000000000"]);
+  // 표시 이름 매핑 (개인 잔액 비공개 → list_public_profiles 로 이름만)
+  const { data: profsRaw } = await supabase.rpc("list_public_profiles");
   const nameMap = new Map<string, string>(
     ((profsRaw as { id: string; display_name: string }[]) ?? []).map((p) => [
       p.id,

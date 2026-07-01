@@ -23,13 +23,22 @@ function CardArt({ name, alt }: { name: string; alt: string }) {
 export default function MyRoleCard({
   role,
   teamColor,
+  teamName,
 }: {
   role: PlayerRoleKind;
   teamColor?: string | null;
+  teamName?: string | null;
 }) {
   const [flipped, setFlipped] = useState(false);
   const isSpy = role === "spy";
-  const accent = isSpy ? "#e11d2e" : teamColor || "#f5c542";
+  const isJester = role === "jester";
+  const artName = isSpy ? "spy" : isJester ? "jester" : "member";
+  const roleLabel = isSpy ? "스파이" : isJester ? "광대" : "충성 팀원";
+  const accent = isSpy
+    ? "#e11d2e"
+    : isJester
+    ? "#a855f7"
+    : teamColor || "#f5c542";
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
@@ -58,7 +67,7 @@ export default function MyRoleCard({
               className="card3d-face card3d-back overflow-hidden rounded-2xl"
               style={{ boxShadow: `0 8px 36px ${accent}55` }}
             >
-              <CardArt name={isSpy ? "spy" : "member"} alt={isSpy ? "스파이" : "충성 팀원"} />
+              <CardArt name={artName} alt={roleLabel} />
             </div>
           </div>
         </button>
@@ -69,6 +78,12 @@ export default function MyRoleCard({
               <p className="font-semibold text-white/90">
                 당신은 <span style={{ color: accent }}>스파이</span>입니다. 들키지 않고
                 우리 팀 토큰을 깎거나 상대에게 흘려, <b>상대팀이 이기게</b> 만드세요.
+              </p>
+            ) : isJester ? (
+              <p className="font-semibold text-white/90">
+                당신은 <span style={{ color: accent }}>광대</span>입니다. 조용히 가장
+                가난하게 — <b>{teamName ?? "우리 팀"}이 우승</b>하고 그 안에서{" "}
+                <b>당신이 개인 꼴찌</b>면 혼자 승리합니다. 단, 팀이 지면 꽝!
               </p>
             ) : (
               <p className="font-semibold text-white/90">

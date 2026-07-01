@@ -142,14 +142,82 @@ export type AppSettings = {
   updated_at: string;
 };
 
-// ---------- 비밀 역할 (스파이) ----------
-// 현재는 'member' | 'spy' 2종. 추후 역할이 추가되면 여기에 값을 늘린다.
-export type PlayerRoleKind = "member" | "spy";
+// ---------- 비밀 역할 (스파이 / 광대) ----------
+// member(일반) | spy(스파이) | jester(광대). 추후 역할이 추가되면 여기에 값을 늘린다.
+export type PlayerRoleKind = "member" | "spy" | "jester";
 
 export type PlayerRole = {
   user_id: string;
   role: PlayerRoleKind;
   revealed: boolean;
+};
+
+// ---------- 공개 프로필 (잔액 제외) ----------
+// list_public_profiles() RPC 결과 — 남의 gold_balance 는 비공개.
+export type PublicProfile = Omit<Profile, "gold_balance">;
+
+// 팀 합산 점수 (team_totals 테이블)
+export type TeamTotal = {
+  team_id: number;
+  total: number;
+  updated_at: string;
+};
+
+// ---------- 효과카드 / 가챠 ----------
+export type EffectGrade = "passive" | "consumable";
+
+export type EffectCardPreset = {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  grade: EffectGrade;
+  effect_key: string;
+  icon: string;
+  weight: number;
+};
+
+// 보유 카드 (프리셋 join 포함)
+export type PlayerEffectCard = {
+  id: number;
+  user_id: string;
+  preset_id: number;
+  acquired_at: string;
+  used_at: string | null;
+  preset?: EffectCardPreset;
+};
+
+// 뽑기 카운터
+export type GachaState = {
+  user_id: string;
+  free_left: number;
+  paid_count: number;
+};
+
+// draw_effect_card() 반환
+export type GachaResult = {
+  blank: boolean;
+  grade: EffectGrade | null;
+  key: string | null;
+  name: string | null;
+  icon: string | null;
+  dup: boolean;
+  refund: number;
+  cost: number;
+  was_free: boolean;
+  balance: number;
+};
+
+// get_player_stats() / ledger_peek() 반환 (개인 누적)
+export type PlayerStats = {
+  earned: number;
+  spent: number;
+  sent: number;
+  received: number;
+  fee_paid: number;
+  gamble_net: number;
+  gacha_spent: number;
+  tx_count: number;
 };
 
 // ---------- 섯다 ----------
