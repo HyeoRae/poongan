@@ -8,6 +8,7 @@ import type {
   PoolOptionView,
 } from "@/lib/types";
 import Games from "@/components/Games";
+import ContentTabs from "@/components/ContentTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ export default async function GamesPage() {
 
   return (
     <div className="space-y-6">
+      <ContentTabs />
       <h1 className="text-xl font-black">🎮 미니게임</h1>
       <p className="text-xs text-white/50">
         일정마다 열리는 예측 배팅! 적중하면 모인 팟을 베팅한 만큼 나눠 갖습니다.
