@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { transferGold } from "@/app/(app)/wallet/actions";
+import {
+  transferGold,
+  adminGetUserTransactions,
+} from "@/app/(app)/wallet/actions";
 import type { PublicProfile, Profile, Transaction } from "@/lib/types";
 import Spinner from "@/components/Spinner";
 
@@ -16,6 +19,101 @@ const TX_LABEL: Record<string, string> = {
   fee: "송금 수수료",
   gacha: "효과카드 뽑기",
 };
+
+// 거래내역 리스트 (내 지갑 / 관리자 참가자 조회 공용)
+function TxList({ transactions }: { transactions: Transaction[] }) {
+  if (transactions.length === 0) {
+    return <p className="text-sm text-white/40">아직 내역이 없습니다.</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {transactions.map((t) => (
+        <li
+          key={t.id}
+          className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
+        >
+          <div>
+            <p className="text-sm font-medium">{TX_LABEL[t.type] ?? t.type}</p>
+            {t.reason && <p className="text-xs text-white/50">{t.reason}</p>}
+            <p className="text-[10px] text-white/30">
+              {new Date(t.created_at).toLocaleString("ko-KR", {
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+          <span
+            className={`font-bold tabular-nums ${
+              t.amount >= 0 ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            {t.amount >= 0 ? "+" : ""}
+            {t.amount.toLocaleString()}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 관리자 전용: 참가자별 송금·획득 등 거래내역 조회
+function AdminLedger({ others }: { others: PublicProfile[] }) {
+  const [target, setTarget] = useState("");
+  const [txs, setTxs] = useState<Transaction[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const players = others.filter((o) => o.role !== "admin" && !o.is_bot);
+
+  function onSelect(id: string) {
+    setTarget(id);
+    setTxs(null);
+    setErr(null);
+    if (!id) return;
+    startTransition(async () => {
+      const res = await adminGetUserTransactions(id);
+      if (res.ok) setTxs(res.transactions);
+      else setErr(res.message);
+    });
+  }
+
+  return (
+    <section className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
+      <h2 className="mb-1 font-bold">🛡️ 참가자 거래내역 (관리자)</h2>
+      <p className="mb-3 text-[11px] text-white/40">
+        참가자의 송금·획득 등 모든 토큰 내역을 확인합니다.
+      </p>
+      <select
+        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
+        value={target}
+        onChange={(e) => onSelect(e.target.value)}
+      >
+        <option value="">참가자 선택</option>
+        {players.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.display_name}
+          </option>
+        ))}
+      </select>
+
+      <div className="mt-3">
+        {pending ? (
+          <div className="flex items-center gap-2 text-sm text-white/50">
+            <Spinner /> 불러오는 중...
+          </div>
+        ) : err ? (
+          <p className="text-sm text-red-400">{err}</p>
+        ) : txs ? (
+          <TxList transactions={txs} />
+        ) : (
+          <p className="text-sm text-white/40">참가자를 선택하세요.</p>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export default function Wallet({
   me,
@@ -105,46 +203,13 @@ export default function Wallet({
         </form>
       </section>
 
+      {/* 관리자 전용: 참가자 거래내역 조회 */}
+      {me.role === "admin" && <AdminLedger others={others} />}
+
       {/* 풍산토큰 내역 */}
       <section>
         <h2 className="mb-3 font-bold">📜 풍산토큰 내역</h2>
-        {transactions.length === 0 ? (
-          <p className="text-sm text-white/40">아직 내역이 없습니다.</p>
-        ) : (
-          <ul className="space-y-2">
-            {transactions.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    {TX_LABEL[t.type] ?? t.type}
-                  </p>
-                  {t.reason && (
-                    <p className="text-xs text-white/50">{t.reason}</p>
-                  )}
-                  <p className="text-[10px] text-white/30">
-                    {new Date(t.created_at).toLocaleString("ko-KR", {
-                      month: "numeric",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <span
-                  className={`font-bold tabular-nums ${
-                    t.amount >= 0 ? "text-green-400" : "text-red-400"
-                  }`}
-                >
-                  {t.amount >= 0 ? "+" : ""}
-                  {t.amount.toLocaleString()}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <TxList transactions={transactions} />
       </section>
     </div>
   );
