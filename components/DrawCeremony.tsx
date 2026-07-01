@@ -103,27 +103,11 @@ export default function DrawCeremony({
     return () => clearTimeout(t);
   }, [draw.status]);
 
-  // 각 프로필 카드 위에 역할 카드를 한 장씩 분배 (공개 순서대로)
+  // 안착 완료된 역할 카드 수 (RoleDealFlight 의 onLand 가 구동)
   const [dealtCount, setDealtCount] = useState(0);
   useEffect(() => {
-    if (!dealReady) {
-      setDealtCount(0);
-      return;
-    }
-    let n = 0;
-    const step = () => {
-      n += 1;
-      setDealtCount(n);
-      beep(520 + n * 14, 0.04, mutedRef.current);
-      if (n < total) {
-        const id = setTimeout(step, DEAL_STAGGER_MS);
-        timers.current.push(id);
-      }
-    };
-    const id = setTimeout(step, 200);
-    timers.current.push(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dealReady, total]);
+    if (!dealReady) setDealtCount(0);
+  }, [dealReady]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
@@ -193,7 +177,7 @@ export default function DrawCeremony({
               ) : draw.status === "done" ? (
                 <>
                   <p className="text-4xl font-black text-gold">🏆 배정 완료!</p>
-                  {dealReady && (
+                  {total > 0 && dealtCount >= total && (
                     <p className="mt-3 animate-[pop_0.4s_ease] text-base font-bold text-white/80">
                       각자 폰에서 카드를 확인하세요! 📱
                     </p>
@@ -233,6 +217,7 @@ export default function DrawCeremony({
                         return (
                           <li
                             key={m.user_id}
+                            data-member-id={m.user_id}
                             className="relative animate-[pop_0.4s_ease] overflow-hidden rounded-lg bg-white/5 p-1.5"
                           >
                             <div className="flex items-center gap-2">
@@ -273,6 +258,15 @@ export default function DrawCeremony({
         )}
       </div>
 
+      {/* 역할 카드 분배: 중앙 덱 셔플 → 각 프로필 카드로 한 장씩 비행 → 안착 */}
+      {draw.status === "done" && dealReady && total > 0 && (
+        <RoleDealFlight
+          order={assignments.map((a) => a.user_id)}
+          muted={muted}
+          onLand={setDealtCount}
+        />
+      )}
+
       {/* 관리자 제어 / 참가자 안내 */}
       <div className="px-5 pb-7 pt-3">
         {isAdmin ? (
@@ -309,26 +303,173 @@ export default function DrawCeremony({
             opacity: 1;
           }
         }
-        /* 역할 카드: 위에서 떨어져 프로필 카드 위로 안착 */
+        /* 역할 카드: 비행 카드가 안착하는 순간 프로필 카드 위로 나타남 */
         .role-overlay {
           position: absolute;
           inset: 0;
           border-radius: inherit;
           opacity: 0;
-          transform: translateY(-160%) rotate(-7deg) scale(1.04);
-          transition: opacity 0.4s ease,
-            transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+          transform: scale(1.08);
+          transition: opacity 0.28s ease, transform 0.28s ease;
           box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
           pointer-events: none;
         }
         .role-overlay.is-dealt {
           opacity: 1;
-          transform: translateY(0) rotate(0deg) scale(1);
+          transform: scale(1);
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ---------- 역할 카드 분배 연출 (중앙 덱 셔플 → 프로필 카드로 비행) ----------
+const SHUFFLE_MS = 850; // 중앙 덱 셔플 시간
+const FLIGHT_MS = 520; // 카드 한 장이 날아가는 시간
+const CARD_W = 42;
+const CARD_H = 59; // 300:420 비율
+
+type FlightCard = {
+  x: number;
+  y: number;
+  rot: number;
+  moving: boolean;
+  gone: boolean;
+};
+
+function RoleDealFlight({
+  order,
+  muted,
+  onLand,
+}: {
+  order: string[];
+  muted: boolean;
+  onLand: (dealtCount: number) => void;
+}) {
+  const total = order.length;
+  const [phase, setPhase] = useState<"shuffle" | "deal">("shuffle");
+  const [cards, setCards] = useState<FlightCard[]>(() =>
+    Array.from({ length: total }, (_, i) => ({
+      x: 0,
+      y: 0,
+      rot: (i - total / 2) * 3,
+      moving: false,
+      gone: false,
+    }))
+  );
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+    // 덱 위치 (화면 상단 중앙)
+    const dx = window.innerWidth / 2;
+    const dy = window.innerHeight * 0.32;
+    setCards((cs) => cs.map((c) => ({ ...c, x: dx, y: dy })));
+
+    if (reduce) {
+      setPhase("deal");
+      onLand(total);
+      return;
+    }
+
+    const dealOne = (i: number) => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-member-id="${order[i]}"]`
+      );
+      let tx = dx;
+      let ty = dy;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        tx = r.left + r.width / 2;
+        ty = r.top + r.height / 2;
+      }
+      beep(520 + i * 14, 0.05, mutedRef.current);
+      setCards((cs) =>
+        cs.map((c, j) => (j === i ? { ...c, x: tx, y: ty, rot: 0, moving: true } : c))
+      );
+      timers.push(
+        setTimeout(() => {
+          onLand(i + 1);
+          setCards((cs) => cs.map((c, j) => (j === i ? { ...c, gone: true } : c)));
+        }, FLIGHT_MS)
+      );
+    };
+
+    timers.push(
+      setTimeout(() => {
+        setPhase("deal");
+        for (let i = 0; i < total; i++) {
+          timers.push(setTimeout(() => dealOne(i), i * DEAL_STAGGER_MS));
+        }
+      }, SHUFFLE_MS)
+    );
+
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-40">
+      <p
+        className="fixed left-0 right-0 top-[15%] text-center text-lg font-black text-gold"
+        style={{ textShadow: "0 0 16px rgba(245,197,66,0.5)" }}
+      >
+        {phase === "shuffle" ? "🎴 카드 셔플 중..." : "역할 카드 분배 중..."}
+      </p>
+
+      {cards.map((c, i) =>
+        c.gone ? null : (
+          <div
+            key={i}
+            className={`flight-card ${phase === "shuffle" ? "is-shuffle" : ""}`}
+            style={{
+              width: CARD_W,
+              height: CARD_H,
+              transform: `translate(${c.x - CARD_W / 2}px, ${
+                c.y - CARD_H / 2
+              }px) rotate(${c.rot}deg)`,
+              transition: c.moving
+                ? `transform ${FLIGHT_MS}ms cubic-bezier(0.2, 0.7, 0.2, 1)`
+                : "none",
+              zIndex: 100 - i,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/role-cards/back.svg"
+              alt=""
+              draggable={false}
+              className="h-full w-full select-none object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]"
+            />
+          </div>
+        )
+      )}
+
+      <style jsx>{`
+        .flight-card {
+          position: fixed;
+          top: 0;
+          left: 0;
+        }
+        .flight-card.is-shuffle img {
+          animation: riffle 0.22s ease-in-out infinite alternate;
+        }
+        @keyframes riffle {
+          from {
+            transform: rotate(-7deg) translateY(-2px);
+          }
+          to {
+            transform: rotate(7deg) translateY(2px);
+          }
         }
         @media (prefers-reduced-motion: reduce) {
-          .role-overlay {
-            transition: opacity 0.2s ease;
-            transform: none;
+          .flight-card.is-shuffle img {
+            animation: none;
           }
         }
       `}</style>
