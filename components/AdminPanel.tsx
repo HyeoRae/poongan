@@ -60,12 +60,16 @@ export default function AdminPanel({
 
   const assigned = players.filter((p) => p.team_id !== null).length;
 
-  function run(fn: () => Promise<{ ok: boolean; message: string }>) {
+  function run(
+    fn: () => Promise<{ ok: boolean; message: string }>,
+    opts?: { skipRefresh?: boolean }
+  ) {
     setMsg(null);
     startTransition(async () => {
       const res = await fn();
       setMsg(res.message);
-      if (res.ok) router.refresh();
+      // 배정식처럼 realtime 으로 화면이 갱신되는 동작은 무거운 refresh 생략
+      if (res.ok && !opts?.skipRefresh) router.refresh();
     });
   }
 
@@ -153,7 +157,7 @@ export default function AdminPanel({
                 "팀 배정식을 시작할까요? 접속한 모두의 화면에 배정식이 뜹니다."
               )
             )
-              run(startDraw);
+              run(startDraw, { skipRefresh: true });
           }}
           className="w-full rounded-xl bg-gold py-3 font-black text-black disabled:opacity-50"
         >

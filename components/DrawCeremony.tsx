@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { useDrawState } from "@/lib/hooks";
 import {
@@ -26,7 +25,6 @@ export default function DrawCeremony({
   initial: DrawState;
 }) {
   const draw = useDrawState(initial);
-  const router = useRouter();
 
   const assignments = draw.assignments ?? [];
   const total = assignments.length;
@@ -136,13 +134,13 @@ export default function DrawCeremony({
     });
   }
 
-  // 시작/닫기 등 저빈도 동작: 상태 정리를 위해 refresh 유지
+  // 확정/역할배정/닫기: 상태 변경은 realtime 으로 전파되므로 router.refresh 불필요.
+  // (무거운 서버 재렌더 제거 → 버튼 반응 빠름) pending 은 중복 클릭 방지용.
   async function act(fn: () => Promise<{ ok: boolean; message: string }>) {
     setPending(true);
     const r = await fn();
     setPending(false);
     if (!r.ok && r.message) alert(r.message);
-    router.refresh();
   }
 
   return (
@@ -641,7 +639,9 @@ function AdminControls({
       disabled={spinning || revealed >= total}
       className="w-full rounded-xl bg-gold py-3.5 text-lg font-black text-black disabled:opacity-50"
     >
-      {status === "intro" ? "▶ 첫 공개 시작" : `다음 공개 (${revealed}/${total})`}
+      {revealed === 0
+        ? "▶ 첫 순서 공개"
+        : `다음 순서 (${revealed}/${total})`}
     </button>
   );
 }
