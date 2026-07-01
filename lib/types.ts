@@ -126,7 +126,7 @@ export type DrawAssignment = {
   team_color: string;
 };
 
-export type DrawStatus = "idle" | "intro" | "revealing" | "done";
+export type DrawStatus = "idle" | "intro" | "revealing" | "done" | "roles";
 
 export type DrawState = {
   id: number;

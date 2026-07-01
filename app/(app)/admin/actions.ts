@@ -428,6 +428,17 @@ export async function revealNext(): Promise<ActionResult> {
   return { ok: true, message: "" };
 }
 
+// 역할 카드 배정 시작 (팀 공개 완료 후, 관리자가 버튼으로 트리거 → 전원 분배 연출)
+export async function startRoleDeal(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("draw_state")
+    .update({ status: "roles", updated_at: new Date().toISOString() })
+    .eq("id", 1);
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "" };
+}
+
 // 결과 확정 (전원 공개 후 피날레)
 export async function finishDraw(): Promise<ActionResult> {
   const supabase = await createClient();

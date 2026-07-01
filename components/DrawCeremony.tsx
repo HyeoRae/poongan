@@ -5,7 +5,12 @@ import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { useDrawState } from "@/lib/hooks";
-import { revealNext, finishDraw, closeDraw } from "@/app/(app)/admin/actions";
+import {
+  revealNext,
+  finishDraw,
+  closeDraw,
+  startRoleDeal,
+} from "@/app/(app)/admin/actions";
 import Avatar from "@/components/Avatar";
 import type { DrawAssignment, DrawState } from "@/lib/types";
 
@@ -99,23 +104,18 @@ export default function DrawCeremony({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animated, revealTarget, spinning]);
 
-  // 피날레 컨페티 → 축포가 충분히 터진 뒤에 역할 카드 분배 시작
-  const [dealReady, setDealReady] = useState(false);
+  // 팀 공개 완료 시 축포. 역할 카드 분배는 관리자가 버튼으로 트리거(status='roles').
   useEffect(() => {
-    if (draw.status !== "done") {
-      setDealReady(false);
-      return;
-    }
-    finale();
-    const t = setTimeout(() => setDealReady(true), 1600);
-    return () => clearTimeout(t);
+    if (draw.status === "done") finale();
   }, [draw.status]);
+
+  const dealing = draw.status === "roles"; // 역할 카드 분배 단계
 
   // 안착 완료된 역할 카드 수 (RoleDealFlight 의 onLand 가 구동)
   const [dealtCount, setDealtCount] = useState(0);
   useEffect(() => {
-    if (!dealReady) setDealtCount(0);
-  }, [dealReady]);
+    if (!dealing) setDealtCount(0);
+  }, [dealing]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
@@ -195,15 +195,11 @@ export default function DrawCeremony({
                     {teams[spinIdx]?.team_name}
                   </div>
                 </>
+              ) : dealing ? (
+                // 역할 분배 중엔 상단 캡션이 안내를 담당(문구 겹침 방지)
+                <p className="text-4xl font-black text-gold/30">🏆</p>
               ) : draw.status === "done" ? (
-                <>
-                  <p className="text-4xl font-black text-gold">🏆 배정 완료!</p>
-                  {total > 0 && dealtCount >= total && (
-                    <p className="mt-3 animate-[pop_0.4s_ease] text-base font-bold text-white/80">
-                      각자 폰에서 카드를 확인하세요! 📱
-                    </p>
-                  )}
-                </>
+                <p className="text-4xl font-black text-gold">🏆 배정 완료!</p>
               ) : (
                 <p className="text-xl font-bold text-white/70">
                   {allRevealed ? "모두 공개되었습니다!" : "두구두구..."}
@@ -233,8 +229,7 @@ export default function DrawCeremony({
                     </div>
                     <ul className="space-y-1.5">
                       {members.map((m) => {
-                        const dealt =
-                          draw.status === "done" && m.idx < dealtCount;
+                        const dealt = dealing && m.idx < dealtCount;
                         return (
                           <li
                             key={m.user_id}
@@ -253,7 +248,7 @@ export default function DrawCeremony({
                               </span>
                             </div>
                             {/* 역할 카드 (뒷면) 가 프로필 카드 위로 안착 */}
-                            {draw.status === "done" && (
+                            {dealing && (
                               <div
                                 aria-hidden
                                 className={`role-overlay ${dealt ? "is-dealt" : ""}`}
@@ -280,16 +275,18 @@ export default function DrawCeremony({
       </div>
 
       {/* 역할 카드 분배: 중앙 덱 셔플 → 각 프로필 카드로 한 장씩 비행 → 안착 */}
-      {draw.status === "done" && dealReady && total > 0 && (
+      {dealing && total > 0 && (
         <RoleDealFlight
           order={assignments.map((a) => a.user_id)}
+          total={total}
+          dealtCount={dealtCount}
           muted={muted}
           onLand={setDealtCount}
         />
       )}
 
-      {/* 관리자 제어 / 참가자 안내 */}
-      <div className="px-5 pb-7 pt-3">
+      {/* 관리자 제어 / 참가자 안내 (분배 암전 위로 올림) */}
+      <div className="relative z-[60] px-5 pb-7 pt-3">
         {isAdmin ? (
           <AdminControls
             status={draw.status}
@@ -299,12 +296,15 @@ export default function DrawCeremony({
             spinning={revealBusy || pending}
             onReveal={onRevealClick}
             onFinish={() => act(finishDraw)}
+            onDealRoles={() => act(startRoleDeal)}
             onClose={() => act(closeDraw)}
           />
         ) : (
           <p className="text-center text-sm text-white/40">
-            {draw.status === "done"
-              ? "잠시 후 종료됩니다"
+            {dealing
+              ? "역할 카드를 나눠주는 중... 📱"
+              : draw.status === "done"
+              ? "곧 역할 카드를 배정합니다 🎴"
               : "사회자가 진행 중입니다 🎤"}
           </p>
         )}
@@ -347,8 +347,9 @@ export default function DrawCeremony({
 // ---------- 역할 카드 분배 연출 (중앙 덱 셔플 → 프로필 카드로 비행) ----------
 const SHUFFLE_MS = 2800; // 중앙 덱 셔플 시간
 const FLIGHT_MS = 560; // 카드 한 장이 날아가는 시간
-const CARD_W = 42;
-const CARD_H = 59; // 300:420 비율
+const CARD_W = 60;
+const CARD_H = 84; // 300:420 비율 (덱을 크게)
+const PILE_OFFSET = 40; // 셔플 시 좌/우 두 더미 간격
 
 type FlightCard = {
   x: number;
@@ -360,21 +361,24 @@ type FlightCard = {
 
 function RoleDealFlight({
   order,
+  total,
+  dealtCount,
   muted,
   onLand,
 }: {
   order: string[];
+  total: number;
+  dealtCount: number;
   muted: boolean;
   onLand: (dealtCount: number) => void;
 }) {
-  const total = order.length;
   const [phase, setPhase] = useState<"shuffle" | "deal">("shuffle");
   const [ready, setReady] = useState(false); // 덱 위치 잡힌 뒤 표시(좌상단 플래시 방지)
   const [cards, setCards] = useState<FlightCard[]>(() =>
     Array.from({ length: total }, (_, i) => ({
       x: 0,
       y: 0,
-      rot: (i - total / 2) * 3,
+      rot: (i - total / 2) * 2,
       moving: false,
       gone: false,
     }))
@@ -388,9 +392,9 @@ function RoleDealFlight({
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-    // 덱 위치 (화면 상단 중앙)
+    // 덱 위치 (화면 중앙)
     const dx = window.innerWidth / 2;
-    const dy = window.innerHeight * 0.32;
+    const dy = window.innerHeight * 0.44;
     setCards((cs) => cs.map((c) => ({ ...c, x: dx, y: dy })));
     setReady(true);
 
@@ -436,25 +440,36 @@ function RoleDealFlight({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const caption =
+    dealtCount >= total && total > 0
+      ? "각자 폰에서 카드를 확인하세요! 📱"
+      : phase === "shuffle"
+      ? "🎴 카드를 섞는 중..."
+      : "역할 카드 분배 중...";
+
   return (
     <div className="pointer-events-none fixed inset-0 z-40">
       <p
-        className="fixed left-0 right-0 top-[15%] text-center text-lg font-black text-gold"
-        style={{ textShadow: "0 0 16px rgba(245,197,66,0.5)" }}
+        className="absolute left-0 right-0 top-[11%] text-center text-xl font-black text-gold"
+        style={{ textShadow: "0 0 18px rgba(245,197,66,0.55)" }}
       >
-        {phase === "shuffle" ? "🎴 카드 셔플 중..." : "역할 카드 분배 중..."}
+        {caption}
       </p>
 
       {ready &&
-        cards.map((c, i) =>
-          c.gone ? null : (
+        cards.map((c, i) => {
+          if (c.gone) return null;
+          // 셔플/대기 중엔 좌·우 두 더미로 갈라두고, 날아갈 땐 더미 오프셋 제거
+          const off = c.moving ? 0 : i % 2 === 0 ? -PILE_OFFSET : PILE_OFFSET;
+          const isLeft = i % 2 === 0;
+          return (
             <div
               key={i}
               className="flight-card"
               style={{
                 width: CARD_W,
                 height: CARD_H,
-                transform: `translate(${c.x - CARD_W / 2}px, ${
+                transform: `translate(${c.x - CARD_W / 2 + off}px, ${
                   c.y - CARD_H / 2
                 }px) rotate(${c.rot}deg)`,
                 transition: c.moving
@@ -469,43 +484,66 @@ function RoleDealFlight({
                 src="/role-cards/back.svg"
                 alt=""
                 draggable={false}
-                className={`card3d h-full w-full select-none object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] ${
-                  phase === "shuffle" ? "is-shuffle" : c.moving ? "is-flying" : ""
+                className={`card3d h-full w-full select-none object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.65)] ${
+                  phase === "shuffle"
+                    ? isLeft
+                      ? "riffle-l"
+                      : "riffle-r"
+                    : c.moving
+                    ? "is-flying"
+                    : ""
                 }`}
                 style={
                   {
                     animationDelay:
-                      phase === "shuffle" ? `${(i % 6) * 70}ms` : "0ms",
+                      phase === "shuffle" ? `${(Math.floor(i / 2) * 110) % 660}ms` : "0ms",
                     ["--flight" as string]: `${FLIGHT_MS}ms`,
                   } as CSSProperties
                 }
               />
             </div>
-          )
-        )}
+          );
+        })}
 
       <style jsx>{`
         .flight-card {
           position: fixed;
           top: 0;
           left: 0;
-          perspective: 600px;
+          perspective: 800px;
         }
         .card3d {
           transform-style: preserve-3d;
         }
-        /* 3D 리플 셔플: 카드를 세워 좌우로 흔들며 앞뒤로 튕김 */
-        .card3d.is-shuffle {
-          animation: riffle3d 0.52s ease-in-out infinite alternate;
+        /* 리플 셔플: 두 더미의 카드가 번갈아 위로 튕겨 올라 다리(bridge)를 이루며 섞임 */
+        .card3d.riffle-l {
+          animation: riffleL 0.82s ease-in-out infinite;
         }
-        @keyframes riffle3d {
-          from {
-            transform: rotateX(10deg) rotateY(-20deg) rotateZ(-6deg)
-              translateZ(10px);
+        .card3d.riffle-r {
+          animation: riffleR 0.82s ease-in-out infinite;
+        }
+        @keyframes riffleL {
+          0%,
+          100% {
+            transform: translate(0, 0) rotateZ(-3deg) rotateX(0deg);
           }
-          to {
-            transform: rotateX(-10deg) rotateY(20deg) rotateZ(6deg)
-              translateZ(-10px);
+          35% {
+            transform: translate(34px, -46px) rotateZ(16deg) rotateX(52deg);
+          }
+          70% {
+            transform: translate(10px, -10px) rotateZ(6deg) rotateX(14deg);
+          }
+        }
+        @keyframes riffleR {
+          0%,
+          100% {
+            transform: translate(0, 0) rotateZ(3deg) rotateX(0deg);
+          }
+          35% {
+            transform: translate(-34px, -46px) rotateZ(-16deg) rotateX(52deg);
+          }
+          70% {
+            transform: translate(-10px, -10px) rotateZ(-6deg) rotateX(14deg);
           }
         }
         /* 3D 비행: 날아가는 동안 카드가 한 바퀴 뒤집히며 안착 */
@@ -514,17 +552,18 @@ function RoleDealFlight({
         }
         @keyframes flip3d {
           from {
-            transform: rotateY(180deg) rotateZ(-12deg) scale(0.9);
+            transform: rotateY(180deg) rotateZ(-12deg) scale(1.05);
           }
           60% {
-            transform: rotateY(20deg) rotateZ(4deg) scale(1.04);
+            transform: rotateY(20deg) rotateZ(4deg) scale(1);
           }
           to {
-            transform: rotateY(0deg) rotateZ(0deg) scale(1);
+            transform: rotateY(0deg) rotateZ(0deg) scale(0.72);
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .card3d.is-shuffle,
+          .card3d.riffle-l,
+          .card3d.riffle-r,
           .card3d.is-flying {
             animation: none;
           }
@@ -542,6 +581,7 @@ function AdminControls({
   spinning,
   onReveal,
   onFinish,
+  onDealRoles,
   onClose,
 }: {
   status: string;
@@ -551,9 +591,11 @@ function AdminControls({
   spinning: boolean;
   onReveal: () => void;
   onFinish: () => void;
+  onDealRoles: () => void;
   onClose: () => void;
 }) {
-  if (status === "done") {
+  // 역할 카드 분배 중/후: 닫기
+  if (status === "roles") {
     return (
       <button
         onClick={onClose}
@@ -561,6 +603,25 @@ function AdminControls({
       >
         배정식 닫기
       </button>
+    );
+  }
+  // 팀 공개 완료(축포 후): 역할 카드 배정 트리거
+  if (status === "done") {
+    return (
+      <div className="space-y-2">
+        <button
+          onClick={onDealRoles}
+          className="w-full rounded-xl bg-gold py-3.5 text-lg font-black text-black"
+        >
+          🎴 역할 카드 배정
+        </button>
+        <button
+          onClick={onClose}
+          className="w-full rounded-xl border border-border py-2.5 text-sm font-bold text-white/70"
+        >
+          배정식 닫기
+        </button>
+      </div>
     );
   }
   if (allRevealed) {
