@@ -30,6 +30,9 @@ export default function DrawCeremony({
 
   // 로컬 애니메이션 진행도: 컬럼에 안착 완료된 인원 수
   const [animated, setAnimated] = useState(() => draw.revealed_count);
+  // 낙관적 공개 목표: 버튼 클릭 즉시 연출 시작(서버 왕복 대기 없이). realtime 값과 max 로 수렴.
+  const [optimistic, setOptimistic] = useState(() => draw.revealed_count);
+  const revealTarget = Math.max(draw.revealed_count, optimistic);
   const [spinning, setSpinning] = useState(false);
   const [spinIdx, setSpinIdx] = useState(0); // 슬롯에 현재 표시중인 팀 인덱스
   const [muted, setMuted] = useState(false);
@@ -47,19 +50,23 @@ export default function DrawCeremony({
     interval.current = null;
   }, []);
 
-  // 새 배정식 시작/닫기로 revealed_count가 줄면 로컬 진행도 리셋
+  // 서버 공개수가 "줄어들면"(새 배정식 시작/닫기 등) 로컬 진행도 리셋.
+  // 낙관적 공개 중엔 animated 가 잠깐 서버값을 앞설 수 있으므로 animated 로 판단하지 않는다.
+  const prevRevealed = useRef(draw.revealed_count);
   useEffect(() => {
-    if (draw.revealed_count < animated) {
+    if (draw.revealed_count < prevRevealed.current) {
       clearTimers();
       setSpinning(false);
       setAnimated(draw.revealed_count);
+      setOptimistic(draw.revealed_count);
     }
-  }, [draw.revealed_count, animated, clearTimers]);
+    prevRevealed.current = draw.revealed_count;
+  }, [draw.revealed_count, clearTimers]);
 
-  // 공개 대기열 처리: animated < revealed_count 면 다음 한 명 슬롯 연출
+  // 공개 대기열 처리: animated < revealTarget 면 다음 한 명 슬롯 연출
   useEffect(() => {
     if (spinning) return;
-    if (animated >= draw.revealed_count) return;
+    if (animated >= revealTarget) return;
     const target = assignments[animated];
     if (!target) return;
 
@@ -89,7 +96,7 @@ export default function DrawCeremony({
       }, SPIN_MS)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animated, draw.revealed_count, spinning]);
+  }, [animated, revealTarget, spinning]);
 
   // 피날레 컨페티 → 축포가 충분히 터진 뒤에 역할 카드 분배 시작
   const [dealReady, setDealReady] = useState(false);
@@ -114,8 +121,21 @@ export default function DrawCeremony({
   if (draw.status === "idle") return null;
 
   const current = spinning ? assignments[animated] : null;
-  const allRevealed = draw.revealed_count >= total && animated >= total;
+  const allRevealed = revealTarget >= total && animated >= total;
+  // 공개 애니메이션이 아직 따라잡는 중이면 버튼 비활성화(중복 클릭 방지)
+  const revealBusy = spinning || animated < revealTarget;
 
+  // 다음 공개: 클릭 즉시 로컬 연출 시작, DB 반영은 백그라운드(렉 방지).
+  // 공개 진행은 realtime 으로 다른 참가자에게도 전파되므로 router.refresh 불필요.
+  function onRevealClick() {
+    if (revealBusy || revealTarget >= total) return;
+    setOptimistic((o) => Math.min(total, Math.max(o, animated) + 1));
+    revealNext().then((r) => {
+      if (!r.ok && r.message) alert(r.message);
+    });
+  }
+
+  // 시작/닫기 등 저빈도 동작: 상태 정리를 위해 refresh 유지
   async function act(fn: () => Promise<{ ok: boolean; message: string }>) {
     setPending(true);
     const r = await fn();
@@ -272,11 +292,11 @@ export default function DrawCeremony({
         {isAdmin ? (
           <AdminControls
             status={draw.status}
-            revealed={draw.revealed_count}
+            revealed={revealTarget}
             total={total}
             allRevealed={allRevealed}
-            spinning={spinning || pending}
-            onReveal={() => act(revealNext)}
+            spinning={revealBusy || pending}
+            onReveal={onRevealClick}
             onFinish={() => act(finishDraw)}
             onClose={() => act(closeDraw)}
           />
