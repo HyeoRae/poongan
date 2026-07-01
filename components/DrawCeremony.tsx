@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { useDrawState } from "@/lib/hooks";
@@ -344,8 +345,8 @@ export default function DrawCeremony({
 }
 
 // ---------- 역할 카드 분배 연출 (중앙 덱 셔플 → 프로필 카드로 비행) ----------
-const SHUFFLE_MS = 850; // 중앙 덱 셔플 시간
-const FLIGHT_MS = 520; // 카드 한 장이 날아가는 시간
+const SHUFFLE_MS = 2800; // 중앙 덱 셔플 시간
+const FLIGHT_MS = 560; // 카드 한 장이 날아가는 시간
 const CARD_W = 42;
 const CARD_H = 59; // 300:420 비율
 
@@ -368,6 +369,7 @@ function RoleDealFlight({
 }) {
   const total = order.length;
   const [phase, setPhase] = useState<"shuffle" | "deal">("shuffle");
+  const [ready, setReady] = useState(false); // 덱 위치 잡힌 뒤 표시(좌상단 플래시 방지)
   const [cards, setCards] = useState<FlightCard[]>(() =>
     Array.from({ length: total }, (_, i) => ({
       x: 0,
@@ -390,6 +392,7 @@ function RoleDealFlight({
     const dx = window.innerWidth / 2;
     const dy = window.innerHeight * 0.32;
     setCards((cs) => cs.map((c) => ({ ...c, x: dx, y: dy })));
+    setReady(true);
 
     if (reduce) {
       setPhase("deal");
@@ -442,53 +445,87 @@ function RoleDealFlight({
         {phase === "shuffle" ? "🎴 카드 셔플 중..." : "역할 카드 분배 중..."}
       </p>
 
-      {cards.map((c, i) =>
-        c.gone ? null : (
-          <div
-            key={i}
-            className={`flight-card ${phase === "shuffle" ? "is-shuffle" : ""}`}
-            style={{
-              width: CARD_W,
-              height: CARD_H,
-              transform: `translate(${c.x - CARD_W / 2}px, ${
-                c.y - CARD_H / 2
-              }px) rotate(${c.rot}deg)`,
-              transition: c.moving
-                ? `transform ${FLIGHT_MS}ms cubic-bezier(0.2, 0.7, 0.2, 1)`
-                : "none",
-              zIndex: 100 - i,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/role-cards/back.svg"
-              alt=""
-              draggable={false}
-              className="h-full w-full select-none object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]"
-            />
-          </div>
-        )
-      )}
+      {ready &&
+        cards.map((c, i) =>
+          c.gone ? null : (
+            <div
+              key={i}
+              className="flight-card"
+              style={{
+                width: CARD_W,
+                height: CARD_H,
+                transform: `translate(${c.x - CARD_W / 2}px, ${
+                  c.y - CARD_H / 2
+                }px) rotate(${c.rot}deg)`,
+                transition: c.moving
+                  ? `transform ${FLIGHT_MS}ms cubic-bezier(0.2, 0.7, 0.2, 1)`
+                  : "none",
+                zIndex: 100 - i,
+              }}
+            >
+              {/* 안쪽 img 를 3D 로 회전 — 컨테이너의 위치 이동과 독립적으로 동작 */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/role-cards/back.svg"
+                alt=""
+                draggable={false}
+                className={`card3d h-full w-full select-none object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] ${
+                  phase === "shuffle" ? "is-shuffle" : c.moving ? "is-flying" : ""
+                }`}
+                style={
+                  {
+                    animationDelay:
+                      phase === "shuffle" ? `${(i % 6) * 70}ms` : "0ms",
+                    ["--flight" as string]: `${FLIGHT_MS}ms`,
+                  } as CSSProperties
+                }
+              />
+            </div>
+          )
+        )}
 
       <style jsx>{`
         .flight-card {
           position: fixed;
           top: 0;
           left: 0;
+          perspective: 600px;
         }
-        .flight-card.is-shuffle img {
-          animation: riffle 0.22s ease-in-out infinite alternate;
+        .card3d {
+          transform-style: preserve-3d;
         }
-        @keyframes riffle {
+        /* 3D 리플 셔플: 카드를 세워 좌우로 흔들며 앞뒤로 튕김 */
+        .card3d.is-shuffle {
+          animation: riffle3d 0.52s ease-in-out infinite alternate;
+        }
+        @keyframes riffle3d {
           from {
-            transform: rotate(-7deg) translateY(-2px);
+            transform: rotateX(10deg) rotateY(-20deg) rotateZ(-6deg)
+              translateZ(10px);
           }
           to {
-            transform: rotate(7deg) translateY(2px);
+            transform: rotateX(-10deg) rotateY(20deg) rotateZ(6deg)
+              translateZ(-10px);
+          }
+        }
+        /* 3D 비행: 날아가는 동안 카드가 한 바퀴 뒤집히며 안착 */
+        .card3d.is-flying {
+          animation: flip3d var(--flight) cubic-bezier(0.2, 0.7, 0.2, 1) 1;
+        }
+        @keyframes flip3d {
+          from {
+            transform: rotateY(180deg) rotateZ(-12deg) scale(0.9);
+          }
+          60% {
+            transform: rotateY(20deg) rotateZ(4deg) scale(1.04);
+          }
+          to {
+            transform: rotateY(0deg) rotateZ(0deg) scale(1);
           }
         }
         @media (prefers-reduced-motion: reduce) {
-          .flight-card.is-shuffle img {
+          .card3d.is-shuffle,
+          .card3d.is-flying {
             animation: none;
           }
         }
