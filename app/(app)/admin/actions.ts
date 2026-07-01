@@ -143,6 +143,16 @@ export async function buildTeams(force: boolean): Promise<ActionResult> {
   return { ok: true, message: "팀 배정 완료!" };
 }
 
+// 팀 배정 초기화 — 전원 팀 해제 + 역할 삭제 + 배정식 idle (배정 전 상태로)
+export async function resetTeams(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reset_teams");
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/dashboard");
+  revalidatePath("/admin");
+  return { ok: true, message: "팀 배정을 초기화했습니다 (배정 전 상태)." };
+}
+
 // 앱 공개/비공개 전환
 export async function setAppPublic(isPublic: boolean): Promise<ActionResult> {
   const supabase = await createClient();

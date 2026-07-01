@@ -9,6 +9,7 @@ import {
   setAppPublic,
   resetUserPassword,
   setBotExcluded,
+  resetTeams,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import AdminGames from "@/components/AdminGames";
@@ -163,6 +164,22 @@ export default function AdminPanel({
         >
           🎬 팀 배정식 시작
         </button>
+        {assigned > 0 && (
+          <button
+            disabled={pending}
+            onClick={() => {
+              if (
+                confirm(
+                  "팀 배정을 초기화할까요? 전원 팀·역할이 해제되고 배정 전 상태로 돌아갑니다. (모두의 화면에 '팀 미배정'으로 표시됨)"
+                )
+              )
+                run(resetTeams);
+            }}
+            className="mt-2 w-full rounded-xl border border-border py-2.5 text-sm font-bold text-white/70 disabled:opacity-50"
+          >
+            ↩️ 배정 초기화 (배정 전으로)
+          </button>
+        )}
       </section>
         </>
       )}
