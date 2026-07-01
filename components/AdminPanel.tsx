@@ -8,6 +8,7 @@ import {
   startDraw,
   setAppPublic,
   resetUserPassword,
+  setBotExcluded,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import AdminGames from "@/components/AdminGames";
@@ -295,6 +296,40 @@ export default function AdminPanel({
 
       {tab === "member" && (
         <>
+      {/* 배정식 참여 / 제외 (봇·테스트) */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-1 font-bold">🤖 배정식 참여 관리</h2>
+        <p className="mb-3 text-xs text-white/50">
+          테스트·봇 계정은 제외하세요. 제외하면 팀 배정식·송금 대상에서 빠집니다.
+          현재 참여 {players.filter((p) => !p.is_bot).length}명 · 제외{" "}
+          {players.filter((p) => p.is_bot).length}명.
+        </p>
+        <ul className="space-y-1.5">
+          {players.map((p) => (
+            <li
+              key={p.id}
+              className="flex items-center justify-between rounded-xl border border-border px-3 py-2 text-sm"
+            >
+              <span className={p.is_bot ? "text-white/40" : ""}>
+                {p.display_name}{" "}
+                <span className="text-white/40">({p.username})</span>
+              </span>
+              <button
+                disabled={pending}
+                onClick={() => run(() => setBotExcluded(p.id, !p.is_bot))}
+                className={`shrink-0 rounded-lg px-3 py-1 text-xs font-bold disabled:opacity-50 ${
+                  p.is_bot
+                    ? "bg-white/10 text-white/60"
+                    : "border border-gold/50 text-gold"
+                }`}
+              >
+                {p.is_bot ? "제외됨 · 포함" : "참여중 · 제외"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* 참가자 비번 초기화 */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-1 font-bold">🔑 참가자 비번 초기화</h2>

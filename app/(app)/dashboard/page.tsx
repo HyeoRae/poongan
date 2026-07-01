@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import Dashboard from "@/components/Dashboard";
 import MyRoleCard from "@/components/MyRoleCard";
+import MyProfileCard from "@/components/MyProfileCard";
 import EnableNotifications from "@/components/EnableNotifications";
 import type { PlayerRole, Profile, Team } from "@/lib/types";
 
@@ -30,6 +31,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {me && (
+        <MyProfileCard
+          userId={me.id}
+          displayName={me.display_name}
+          avatarUrl={me.avatar_url}
+          teamColor={myTeam?.color}
+        />
+      )}
       {role && <MyRoleCard role={role.role} teamColor={myTeam?.color} />}
       <Dashboard
         initialProfiles={(profiles as Profile[]) ?? []}

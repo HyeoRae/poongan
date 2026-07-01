@@ -140,6 +140,17 @@ export function useSutdaRoom(roomId: number, onChange: () => void) {
 export function useDrawState(initial: DrawState) {
   const [draw, setDraw] = useState<DrawState>(initial);
 
+  // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
+  const applyIfNewer = (next: DrawState) =>
+    setDraw((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+
+  // router.refresh() 등으로 서버가 새 initial 을 내려주면 즉시 반영
+  // (useState 는 최초 마운트만 읽으므로 prop 변경을 별도로 동기화)
+  useEffect(() => {
+    applyIfNewer(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
@@ -154,7 +165,7 @@ export function useDrawState(initial: DrawState) {
         },
         (payload) => {
           if (payload.eventType !== "DELETE") {
-            setDraw(payload.new as DrawState);
+            applyIfNewer(payload.new as DrawState);
           }
         }
       )

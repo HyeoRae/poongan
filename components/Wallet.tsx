@@ -68,11 +68,7 @@ export default function Wallet({
           >
             <option value="">받는 사람 선택</option>
             {others
-              .filter(
-                (o) =>
-                  o.role !== "admin" &&
-                  !o.username.toLowerCase().includes("test")
-              )
+              .filter((o) => o.role !== "admin" && !o.is_bot)
               .map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.display_name}

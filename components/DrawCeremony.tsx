@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
 import { useDrawState } from "@/lib/hooks";
 import { revealNext, finishDraw, closeDraw } from "@/app/(app)/admin/actions";
+import Avatar from "@/components/Avatar";
 import type { DrawAssignment, DrawState } from "@/lib/types";
 
 const SPIN_MS = 1800; // 슬롯머신 도는 시간
 const SETTLE_MS = 800; // 착지 후 다음으로 넘어가기까지
+const DEAL_STAGGER_MS = 160; // 역할 카드 한 장씩 분배 간격
 
 export default function DrawCeremony({
   isAdmin,
@@ -89,12 +91,39 @@ export default function DrawCeremony({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animated, draw.revealed_count, spinning]);
 
-  // 피날레 컨페티
+  // 피날레 컨페티 → 축포가 충분히 터진 뒤에 역할 카드 분배 시작
+  const [dealReady, setDealReady] = useState(false);
   useEffect(() => {
-    if (draw.status === "done") {
-      finale();
+    if (draw.status !== "done") {
+      setDealReady(false);
+      return;
     }
+    finale();
+    const t = setTimeout(() => setDealReady(true), 1600);
+    return () => clearTimeout(t);
   }, [draw.status]);
+
+  // 각 프로필 카드 위에 역할 카드를 한 장씩 분배 (공개 순서대로)
+  const [dealtCount, setDealtCount] = useState(0);
+  useEffect(() => {
+    if (!dealReady) {
+      setDealtCount(0);
+      return;
+    }
+    let n = 0;
+    const step = () => {
+      n += 1;
+      setDealtCount(n);
+      beep(520 + n * 14, 0.04, mutedRef.current);
+      if (n < total) {
+        const id = setTimeout(step, DEAL_STAGGER_MS);
+        timers.current.push(id);
+      }
+    };
+    const id = setTimeout(step, 200);
+    timers.current.push(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealReady, total]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
@@ -139,7 +168,15 @@ export default function DrawCeremony({
               {current ? (
                 <>
                   <p className="text-sm text-white/50">다음 주인공은...</p>
-                  <p className="my-2 text-3xl font-black">{current.display_name}</p>
+                  <div className="my-2 flex items-center justify-center gap-3">
+                    <Avatar
+                      url={current.avatar_url}
+                      name={current.display_name}
+                      color={teams[spinIdx]?.team_color}
+                      size={48}
+                    />
+                    <p className="text-3xl font-black">{current.display_name}</p>
+                  </div>
                   <div
                     className="mx-auto w-56 rounded-2xl border-2 py-5 text-2xl font-black transition-all duration-100"
                     style={{
@@ -154,7 +191,14 @@ export default function DrawCeremony({
                   </div>
                 </>
               ) : draw.status === "done" ? (
-                <p className="text-4xl font-black text-gold">🏆 배정 완료!</p>
+                <>
+                  <p className="text-4xl font-black text-gold">🏆 배정 완료!</p>
+                  {dealReady && (
+                    <p className="mt-3 animate-[pop_0.4s_ease] text-base font-bold text-white/80">
+                      각자 폰에서 카드를 확인하세요! 📱
+                    </p>
+                  )}
+                </>
               ) : (
                 <p className="text-xl font-bold text-white/70">
                   {allRevealed ? "모두 공개되었습니다!" : "두구두구..."}
@@ -162,11 +206,13 @@ export default function DrawCeremony({
               )}
             </div>
 
-            {/* 팀 컬럼 */}
+            {/* 팀 컬럼 (프로필 카드 + 역할 카드 분배) */}
             <div className="grid grid-cols-2 gap-3">
               {teams.map((t) => {
+                // slice(0, animated) 라 idx 는 곧 공개 순서(전역 인덱스)
                 const members = assignments
                   .slice(0, animated)
+                  .map((a, idx) => ({ ...a, idx }))
                   .filter((a) => a.team_id === t.team_id);
                 return (
                   <div
@@ -181,14 +227,43 @@ export default function DrawCeremony({
                       {t.team_name}
                     </div>
                     <ul className="space-y-1.5">
-                      {members.map((m) => (
-                        <li
-                          key={m.user_id}
-                          className="animate-[pop_0.4s_ease] rounded-lg bg-white/5 py-1.5 text-center text-sm font-semibold"
-                        >
-                          {m.display_name}
-                        </li>
-                      ))}
+                      {members.map((m) => {
+                        const dealt =
+                          draw.status === "done" && m.idx < dealtCount;
+                        return (
+                          <li
+                            key={m.user_id}
+                            className="relative animate-[pop_0.4s_ease] overflow-hidden rounded-lg bg-white/5 p-1.5"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar
+                                url={m.avatar_url}
+                                name={m.display_name}
+                                color={t.team_color}
+                                size={30}
+                              />
+                              <span className="truncate text-sm font-semibold">
+                                {m.display_name}
+                              </span>
+                            </div>
+                            {/* 역할 카드 (뒷면) 가 프로필 카드 위로 안착 */}
+                            {draw.status === "done" && (
+                              <div
+                                aria-hidden
+                                className={`role-overlay ${dealt ? "is-dealt" : ""}`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/role-cards/back.svg"
+                                  alt=""
+                                  draggable={false}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 );
@@ -197,9 +272,6 @@ export default function DrawCeremony({
           </>
         )}
       </div>
-
-      {/* 역할 카드 분배 연출 (배정 완료 후, 정체는 비표시) */}
-      {draw.status === "done" && <RoleDeal count={total} muted={muted} />}
 
       {/* 관리자 제어 / 참가자 안내 */}
       <div className="px-5 pb-7 pt-3">
@@ -237,149 +309,26 @@ export default function DrawCeremony({
             opacity: 1;
           }
         }
-      `}</style>
-    </div>
-  );
-}
-
-// ---------- 역할 카드 분배 연출 ----------
-// done 직후: 중앙 덱 셔플 → 양 팀으로 카드가 날아가 안착 → "폰에서 확인" 안내.
-// 전부 뒷면(cosmetic)이라 정체는 드러나지 않는다.
-const DEAL_INTRO_MS = 400;
-const DEAL_SHUFFLE_MS = 900;
-const DEAL_STAGGER_MS = 110;
-
-function RoleDeal({ count, muted }: { count: number; muted: boolean }) {
-  const [phase, setPhase] = useState<"intro" | "shuffle" | "deal" | "outro">(
-    "intro"
-  );
-  const [dealt, setDealt] = useState(false);
-  const mutedRef = useRef(muted);
-  mutedRef.current = muted;
-
-  useEffect(() => {
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setPhase("outro");
-      setDealt(true);
-      return;
-    }
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const dealStart = DEAL_INTRO_MS + DEAL_SHUFFLE_MS;
-
-    timers.push(setTimeout(() => setPhase("shuffle"), DEAL_INTRO_MS));
-    timers.push(
-      setTimeout(() => {
-        setPhase("deal");
-        setDealt(true);
-      }, dealStart)
-    );
-    // 카드가 한 장씩 안착하는 박자에 맞춘 소프트 비프
-    for (let k = 0; k < count; k++) {
-      timers.push(
-        setTimeout(
-          () => beep(520 + k * 14, 0.04, mutedRef.current),
-          dealStart + 250 + k * DEAL_STAGGER_MS
-        )
-      );
-    }
-    timers.push(
-      setTimeout(
-        () => setPhase("outro"),
-        dealStart + count * DEAL_STAGGER_MS + 500
-      )
-    );
-
-    return () => timers.forEach(clearTimeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const half = Math.ceil(count / 2);
-  const cards = Array.from({ length: count }, (_, i) => {
-    const isLeft = i < half;
-    const idx = isLeft ? i : i - half;
-    const rows = isLeft ? half : count - half;
-    const x = isLeft ? 24 : 76; // %
-    const y = rows <= 1 ? 48 : 30 + idx * (40 / (rows - 1)); // 30%~70%
-    return { x, y, delay: idx * DEAL_STAGGER_MS };
-  });
-
-  const caption =
-    phase === "outro"
-      ? "각자 폰에서 카드를 확인하세요! 📱"
-      : phase === "deal"
-      ? "역할 배정 중..."
-      : "🎴 역할 배정";
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
-      {/* 약한 암전 */}
-      <div
-        className="absolute inset-0 bg-black/45 transition-opacity duration-500"
-        style={{ opacity: phase === "outro" ? 0.15 : 0.45 }}
-      />
-
-      <p
-        className="absolute left-0 right-0 top-[14%] text-center text-xl font-black text-gold transition-all duration-500"
-        style={{ textShadow: "0 0 18px rgba(245,197,66,0.5)" }}
-      >
-        {caption}
-      </p>
-
-      {cards.map((c, i) => (
-        <div
-          key={i}
-          className={`roledeal-card ${phase === "shuffle" ? "is-shuffle" : ""}`}
-          style={{
-            left: dealt ? `${c.x}%` : "50%",
-            top: dealt ? `${c.y}%` : "46%",
-            transitionDelay: `${dealt ? c.delay : 0}ms`,
-            zIndex: 30 - i,
-            // 안착 시 살짝 기울기, 셔플 중엔 스택
-            transform: dealt
-              ? `translate(-50%, -50%) rotate(${(i % 2 ? 1 : -1) * 5}deg)`
-              : `translate(-50%, -50%) rotate(${(i - count / 2) * 2}deg)`,
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/role-cards/back.svg"
-            alt=""
-            draggable={false}
-            className="h-full w-full select-none object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)]"
-          />
-        </div>
-      ))}
-
-      <style jsx>{`
-        .roledeal-card {
+        /* 역할 카드: 위에서 떨어져 프로필 카드 위로 안착 */
+        .role-overlay {
           position: absolute;
-          width: 52px;
-          aspect-ratio: 300 / 420;
-          transition: left 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
-            top 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
-            transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+          inset: 0;
+          border-radius: inherit;
+          opacity: 0;
+          transform: translateY(-160%) rotate(-7deg) scale(1.04);
+          transition: opacity 0.4s ease,
+            transform 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+          pointer-events: none;
         }
-        .roledeal-card.is-shuffle {
-          animation: riffle 0.18s ease-in-out infinite alternate;
-        }
-        @keyframes riffle {
-          from {
-            transform: translate(-58%, -50%) rotate(-8deg);
-          }
-          to {
-            transform: translate(-42%, -50%) rotate(8deg);
-          }
+        .role-overlay.is-dealt {
+          opacity: 1;
+          transform: translateY(0) rotate(0deg) scale(1);
         }
         @media (prefers-reduced-motion: reduce) {
-          .roledeal-card {
-            transition: none;
-          }
-          .roledeal-card.is-shuffle {
-            animation: none;
+          .role-overlay {
+            transition: opacity 0.2s ease;
+            transform: none;
           }
         }
       `}</style>

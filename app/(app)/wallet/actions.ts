@@ -15,17 +15,13 @@ export async function transferGold(
   }
   const supabase = await createClient();
 
-  // 관리자·test 계정에게는 보낼 수 없음
+  // 관리자·봇/테스트 계정에게는 보낼 수 없음
   const { data: recipient } = await supabase
     .from("profiles")
-    .select("role, username")
+    .select("role, is_bot")
     .eq("id", toUserId)
     .single();
-  if (
-    recipient &&
-    (recipient.role === "admin" ||
-      recipient.username.toLowerCase().includes("test"))
-  ) {
+  if (recipient && (recipient.role === "admin" || recipient.is_bot)) {
     return { ok: false, message: "보낼 수 없는 상대입니다." };
   }
 

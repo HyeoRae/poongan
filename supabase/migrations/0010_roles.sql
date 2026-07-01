@@ -50,7 +50,8 @@ begin
   end if;
 
   -- 초기화 후 전원 member 로 세팅
-  delete from public.player_roles;
+  -- (sql_safe_updates 가 켜진 환경에서도 통과하도록 where 절 명시)
+  delete from public.player_roles where true;
   insert into public.player_roles (user_id, role)
   select id, 'member' from public.profiles where role = 'player';
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfilesRealtime } from "@/lib/hooks";
+import Avatar from "@/components/Avatar";
 import type { Profile, Team } from "@/lib/types";
 
 export default function Dashboard({
@@ -85,6 +86,12 @@ export default function Dashboard({
                   <li key={m.id} className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm">
                       <span className="w-5 text-center text-white/40">{i + 1}</span>
+                      <Avatar
+                        url={m.avatar_url}
+                        name={m.display_name}
+                        color={team.color}
+                        size={28}
+                      />
                       {m.display_name}
                     </span>
                     <span className="font-bold tabular-nums text-gold">

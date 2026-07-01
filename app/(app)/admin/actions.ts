@@ -115,6 +115,25 @@ export async function adminGrantTeamGold(
   return { ok: true, message: "팀 전원에게 처리 완료" };
 }
 
+// 참가자를 배정식·송금 대상에서 제외(봇/테스트)하거나 다시 포함
+export async function setBotExcluded(
+  userId: string,
+  excluded: boolean
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_bot", {
+    p_user: userId,
+    p_is_bot: excluded,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  return {
+    ok: true,
+    message: excluded ? "배정식에서 제외했습니다." : "배정식에 포함했습니다.",
+  };
+}
+
 export async function buildTeams(force: boolean): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("build_teams", { p_force: force });
@@ -340,9 +359,9 @@ export async function startDraw(): Promise<ActionResult> {
   const { error: rErr } = await supabase.rpc("assign_roles", { p_force: true });
   if (rErr) return { ok: false, message: rErr.message };
 
-  // 2) 배정 결과 + 팀 정보 읽기
+  // 2) 배정 결과 + 팀 정보 읽기 (봇/테스트 제외)
   const [{ data: players }, { data: teams }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("role", "player"),
+    supabase.from("profiles").select("*").eq("role", "player").eq("is_bot", false),
     supabase.from("teams").select("*"),
   ]);
   const teamMap = new Map<number, Team>(
@@ -357,6 +376,7 @@ export async function startDraw(): Promise<ActionResult> {
       return {
         user_id: p.id,
         display_name: p.display_name,
+        avatar_url: p.avatar_url,
         team_id: p.team_id as number,
         team_name: t?.name ?? "",
         team_color: t?.color ?? "#888888",

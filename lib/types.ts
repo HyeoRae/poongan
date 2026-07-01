@@ -14,6 +14,8 @@ export type Profile = {
   team_id: number | null;
   gold_balance: number;
   must_change_password: boolean;
+  avatar_url: string | null;
+  is_bot: boolean;
   created_at: string;
 };
 
@@ -118,6 +120,7 @@ export type TeamWithMembers = Team & {
 export type DrawAssignment = {
   user_id: string;
   display_name: string;
+  avatar_url: string | null;
   team_id: number;
   team_name: string;
   team_color: string;
