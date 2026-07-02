@@ -24,11 +24,28 @@ export default async function WalletPage() {
     .filter((p) => p.id !== me.id)
     .sort((a, b) => a.display_name.localeCompare(b.display_name));
 
+  // 관리자: 전체 참가자 거래 타임라인 초기값 + user_id→이름 매핑
+  let adminTxs: Transaction[] = [];
+  let nameMap: Record<string, string> = {};
+  if (me.role === "admin") {
+    const { data: allTxs } = await supabase
+      .from("transactions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    adminTxs = (allTxs as Transaction[]) ?? [];
+    nameMap = Object.fromEntries(
+      ((roster as PublicProfile[]) ?? []).map((p) => [p.id, p.display_name])
+    );
+  }
+
   return (
     <Wallet
       me={me}
       others={others}
       transactions={(txs as Transaction[]) ?? []}
+      adminTxs={adminTxs}
+      nameMap={nameMap}
     />
   );
 }

@@ -6,14 +6,14 @@ import type { Transaction } from "@/lib/types";
 
 export type ActionResult = { ok: boolean; message: string };
 
-// 관리자: 특정 참가자의 거래내역(송금·획득 등) 조회.
+// 관리자: 참가자 거래내역(송금·획득 등) 조회.
+// userId 가 비어있으면 전체 참가자 타임라인, 지정하면 해당 참가자만 필터.
 // transactions RLS(read_tx)가 관리자에게 전체 열람을 허용하므로 직접 조회 가능.
-export async function adminGetUserTransactions(
-  userId: string
+export async function adminGetTransactions(
+  userId?: string
 ): Promise<
   { ok: true; transactions: Transaction[] } | { ok: false; message: string }
 > {
-  if (!userId) return { ok: false, message: "참가자를 선택하세요." };
   const supabase = await createClient();
 
   const {
@@ -28,12 +28,14 @@ export async function adminGetUserTransactions(
   if (me?.role !== "admin")
     return { ok: false, message: "관리자만 조회할 수 있습니다." };
 
-  const { data, error } = await supabase
+  let q = supabase
     .from("transactions")
     .select("*")
-    .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(200);
+  if (userId) q = q.eq("user_id", userId);
+
+  const { data, error } = await q;
   if (error) return { ok: false, message: error.message };
   return { ok: true, transactions: (data as Transaction[]) ?? [] };
 }

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   transferGold,
-  adminGetUserTransactions,
+  adminGetTransactions,
 } from "@/app/(app)/wallet/actions";
 import type { PublicProfile, Profile, Transaction } from "@/lib/types";
 import Spinner from "@/components/Spinner";
@@ -20,8 +20,15 @@ const TX_LABEL: Record<string, string> = {
   gacha: "효과카드 뽑기",
 };
 
-// 거래내역 리스트 (내 지갑 / 관리자 참가자 조회 공용)
-function TxList({ transactions }: { transactions: Transaction[] }) {
+// 거래내역 리스트 (내 지갑 / 관리자 타임라인 공용)
+// nameMap 을 주면 각 항목에 대상 참가자 이름을 표시(관리자 타임라인용).
+function TxList({
+  transactions,
+  nameMap,
+}: {
+  transactions: Transaction[];
+  nameMap?: Record<string, string>;
+}) {
   if (transactions.length === 0) {
     return <p className="text-sm text-white/40">아직 내역이 없습니다.</p>;
   }
@@ -33,6 +40,11 @@ function TxList({ transactions }: { transactions: Transaction[] }) {
           className="flex items-center justify-between rounded-xl border border-border bg-card px-3 py-2.5"
         >
           <div>
+            {nameMap && (
+              <p className="text-xs font-bold text-gold">
+                {(t.user_id && nameMap[t.user_id]) || "알 수 없음"}
+              </p>
+            )}
             <p className="text-sm font-medium">{TX_LABEL[t.type] ?? t.type}</p>
             {t.reason && <p className="text-xs text-white/50">{t.reason}</p>}
             <p className="text-[10px] text-white/30">
@@ -58,10 +70,18 @@ function TxList({ transactions }: { transactions: Transaction[] }) {
   );
 }
 
-// 관리자 전용: 참가자별 송금·획득 등 거래내역 조회
-function AdminLedger({ others }: { others: PublicProfile[] }) {
+// 관리자 전용: 전체 참가자 거래 타임라인 + 참가자 필터
+function AdminLedger({
+  others,
+  initialTxs,
+  nameMap,
+}: {
+  others: PublicProfile[];
+  initialTxs: Transaction[];
+  nameMap: Record<string, string>;
+}) {
   const [target, setTarget] = useState("");
-  const [txs, setTxs] = useState<Transaction[] | null>(null);
+  const [txs, setTxs] = useState<Transaction[]>(initialTxs);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -69,11 +89,9 @@ function AdminLedger({ others }: { others: PublicProfile[] }) {
 
   function onSelect(id: string) {
     setTarget(id);
-    setTxs(null);
     setErr(null);
-    if (!id) return;
     startTransition(async () => {
-      const res = await adminGetUserTransactions(id);
+      const res = await adminGetTransactions(id || undefined);
       if (res.ok) setTxs(res.transactions);
       else setErr(res.message);
     });
@@ -81,16 +99,17 @@ function AdminLedger({ others }: { others: PublicProfile[] }) {
 
   return (
     <section className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
-      <h2 className="mb-1 font-bold">🛡️ 참가자 거래내역 (관리자)</h2>
+      <h2 className="mb-1 font-bold">🛡️ 참가자 거래 타임라인 (관리자)</h2>
       <p className="mb-3 text-[11px] text-white/40">
-        참가자의 송금·획득 등 모든 토큰 내역을 확인합니다.
+        전체 참가자의 송금·획득 등 토큰 내역입니다. 참가자를 골라 필터링할 수
+        있습니다.
       </p>
       <select
         className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-gold"
         value={target}
         onChange={(e) => onSelect(e.target.value)}
       >
-        <option value="">참가자 선택</option>
+        <option value="">전체 참가자</option>
         {players.map((o) => (
           <option key={o.id} value={o.id}>
             {o.display_name}
@@ -105,10 +124,8 @@ function AdminLedger({ others }: { others: PublicProfile[] }) {
           </div>
         ) : err ? (
           <p className="text-sm text-red-400">{err}</p>
-        ) : txs ? (
-          <TxList transactions={txs} />
         ) : (
-          <p className="text-sm text-white/40">참가자를 선택하세요.</p>
+          <TxList transactions={txs} nameMap={target ? undefined : nameMap} />
         )}
       </div>
     </section>
@@ -119,10 +136,14 @@ export default function Wallet({
   me,
   others,
   transactions,
+  adminTxs = [],
+  nameMap = {},
 }: {
   me: Profile;
   others: PublicProfile[];
   transactions: Transaction[];
+  adminTxs?: Transaction[];
+  nameMap?: Record<string, string>;
 }) {
   const router = useRouter();
   const [to, setTo] = useState("");
@@ -203,8 +224,10 @@ export default function Wallet({
         </form>
       </section>
 
-      {/* 관리자 전용: 참가자 거래내역 조회 */}
-      {me.role === "admin" && <AdminLedger others={others} />}
+      {/* 관리자 전용: 전체 참가자 거래 타임라인 + 필터 */}
+      {me.role === "admin" && (
+        <AdminLedger others={others} initialTxs={adminTxs} nameMap={nameMap} />
+      )}
 
       {/* 풍산토큰 내역 */}
       <section>
