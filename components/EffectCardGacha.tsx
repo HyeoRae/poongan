@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { drawEffectCard } from "@/app/(app)/card/actions";
 import { useMyCardsRealtime } from "@/lib/hooks";
@@ -46,24 +46,25 @@ export default function EffectCardGacha({
   nextCost: number;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [phase, setPhase] = useState<"idle" | "spin" | "reveal">("idle");
   const [result, setResult] = useState<GachaResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useMyCardsRealtime(userId, () => router.refresh());
 
-  function onDraw() {
+  async function onDraw() {
     if (pending) return;
+    setPending(true);
     setErr(null);
     setResult(null);
     setPhase("spin");
-    startTransition(async () => {
+    try {
       const started = Date.now();
       const res = await drawEffectCard();
-      // 최소 900ms 연출
-      const wait = Math.max(0, 900 - (Date.now() - started));
-      await new Promise((r) => setTimeout(r, wait));
+      // 최소 600ms 연출 (뽑기 자체가 그보다 빠르면 살짝 대기)
+      const wait = Math.max(0, 600 - (Date.now() - started));
+      if (wait) await new Promise((r) => setTimeout(r, wait));
       if (!res.ok) {
         setErr(res.message);
         setPhase("idle");
@@ -71,8 +72,14 @@ export default function EffectCardGacha({
       }
       setResult(res.result);
       setPhase("reveal");
+      // 잔액·무료횟수·보유카드 갱신은 백그라운드로 (버튼 로딩과 분리 → 무한로딩 방지)
       router.refresh();
-    });
+    } catch {
+      setErr("뽑기에 실패했어요. 잠시 후 다시 시도해주세요.");
+      setPhase("idle");
+    } finally {
+      setPending(false);
+    }
   }
 
   const isFree = freeLeft > 0;
@@ -82,7 +89,7 @@ export default function EffectCardGacha({
 
   return (
     <section className="rounded-2xl border border-border bg-card p-5">
-      <h1 className="mb-1 text-xl font-black">🎴 효과카드 뽑기</h1>
+      <h1 className="mb-1 text-xl font-black">🃏 효과카드 뽑기</h1>
       <p className="mb-4 text-xs text-white/50">
         꽝 40% · 상시 45% · 희귀 15%. 무료 뽑기 후에는 뽑을수록 비싸져요.
       </p>
@@ -96,7 +103,7 @@ export default function EffectCardGacha({
             boxShadow: phase === "reveal" ? `0 8px 36px ${ring}66` : undefined,
           }}
         >
-          {phase === "idle" && <span className="text-5xl opacity-40">🎴</span>}
+          {phase === "idle" && <span className="text-5xl opacity-40">🃏</span>}
           {phase === "spin" && (
             <span className="animate-pulse text-5xl">🌀</span>
           )}
@@ -115,7 +122,7 @@ export default function EffectCardGacha({
               ) : (
                 <>
                   <div className="flex h-24 w-full items-center justify-center">
-                    <CardFace icon={result.icon ?? "🎴"} artKey={result.key} />
+                    <CardFace icon={result.icon ?? "🃏"} artKey={result.key} />
                   </div>
                   <p className="text-sm font-black" style={{ color: ring }}>
                     {result.name}

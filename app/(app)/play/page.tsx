@@ -12,7 +12,7 @@ const cards = [
   },
   {
     href: "/sutda",
-    icon: "🃏",
+    icon: "🎴",
     title: "섯다",
     desc: "친구들과 실시간으로 한 판 붙는 멀티플레이 섯다",
   },
@@ -24,7 +24,7 @@ const cards = [
   },
   {
     href: "/card",
-    icon: "🎴",
+    icon: "🃏",
     title: "효과카드 뽑기",
     desc: "풍산토큰으로 뽑는 버프 카드 — 상시/1회용, 꽝도 있음",
   },

@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 // 컨텐츠(게임/섯다/도박) 페이지 상단 전환 탭
 const tabs = [
   { href: "/games", label: "🎮 미니게임" },
-  { href: "/sutda", label: "🃏 섯다" },
+  { href: "/sutda", label: "🎴 섯다" },
   { href: "/gamble", label: "🎰 도박장" },
-  { href: "/card", label: "🎴 효과카드" },
+  { href: "/card", label: "🃏 효과카드" },
 ];
 
 export default function ContentTabs() {
