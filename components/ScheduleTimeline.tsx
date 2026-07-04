@@ -160,7 +160,14 @@ export default function ScheduleTimeline({
                   </div>
                 </div>
                 {it.location && (
-                  <p className="mt-0.5 text-xs text-white/50">📍 {it.location}</p>
+                  <a
+                    href={`https://map.kakao.com/?q=${encodeURIComponent(it.location)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-0.5 inline-flex items-center gap-1 text-xs text-white/50 underline decoration-dotted underline-offset-2 hover:text-gold"
+                  >
+                    📍 {it.location}
+                  </a>
                 )}
                 {it.description && (
                   <p className="mt-1 text-sm text-white/70">{it.description}</p>
