@@ -18,18 +18,18 @@ export const SCHEDULE_ITEMS: ScheduleSeed[] = [
   { day: 1, start_time: "11:00", title: "거제 식당 도착", location: "거제", sort_order: 2 },
   { day: 1, start_time: "13:00", title: "점심 식사", sort_order: 3 },
   { day: 1, start_time: "14:00", title: "숙소 이동 & 짐 정리", location: "거제시 남부면 다대2길 66", sort_order: 4 },
-  { day: 1, start_time: "15:00", title: "🏄 서프앤 윤돌섬 패들보트 + 스노클링", location: "거제 서프앤윤돌섬", sort_order: 5 },
-  { day: 1, start_time: "18:00", title: "숙소 복귀 & 바베큐 준비", sort_order: 6 },
+  { day: 1, start_time: "15:00", title: "🏄 서프앤 윤돌섬 패들보트 + 스노클링", location: "경남 거제시 일운면 구조라로4길 15", sort_order: 5 },
+  { day: 1, start_time: "18:00", title: "숙소 복귀 & 바베큐 준비", location: "거제시 남부면 다대2길 66", sort_order: 6 },
   { day: 1, start_time: "19:00", title: "🍖 바베큐 파티", sort_order: 7 },
   { day: 1, start_time: "20:30", title: "바베큐 정리 & 숙소 내부 이동", sort_order: 8 },
   { day: 1, start_time: "20:40", title: "저녁 컨텐츠 & 2차 파티", sort_order: 9 },
 
   // 2일차 (7/11)
-  { day: 2, start_time: "07:00", title: "기상 & 선상낚시 장소로 이동", sort_order: 1 },
+  { day: 2, start_time: "07:00", title: "기상 & 선상낚시 장소로 이동", location: "경남 거제시 일운면 와현해변길 46", description: "와현유람선 선착장 앞", sort_order: 1 },
   { day: 2, start_time: "08:30", title: "🎣 선상 낚시", description: "선상라면", sort_order: 2 },
   { day: 2, start_time: "12:00", title: "점심 식사 — 낚시한 물고기", sort_order: 3 },
-  { day: 2, start_time: "13:00", title: "♨️ 온천", sort_order: 4 },
-  { day: 2, start_time: "15:00", title: "통영 숙소로 이동", location: "통영 제이힐펜션", sort_order: 5 },
+  { day: 2, start_time: "13:00", title: "♨️ 온천", location: "경상남도 거제시 양정동 976-14", sort_order: 4 },
+  { day: 2, start_time: "15:00", title: "통영 숙소로 이동 (제이힐펜션)", location: "경상남도 통영시 용남면 장평리 738", sort_order: 5 },
 
   // 3일차 (7/12)
   { day: 3, start_time: "~11:00", title: "기상 & 외출 준비", description: "해장라면", sort_order: 1 },
