@@ -142,6 +142,26 @@ export type AppSettings = {
   updated_at: string;
 };
 
+// ---------- 🛎️ 공용 이벤트 대기실 (실시간 접속 현황) ----------
+export type EventLobbyStatus = "closed" | "open";
+
+// 싱글톤(id=1) — 전원이 Realtime 구독. 열림/닫힘 상태만 동기화.
+export type EventLobby = {
+  id: number;
+  status: EventLobbyStatus;
+  title: string | null;
+  updated_at: string;
+};
+
+// 대기실 Presence — "지금 접속(시청) 중인 사람".
+// DB 가 아니라 Realtime Presence 채널로 오가는 휘발성 데이터.
+export type LobbyPresence = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  is_admin: boolean;
+};
+
 // ---------- 벌칙 옷 랜덤 뽑기 세리머니 ----------
 export type PenaltyOutfit = "banana" | "clown" | "mario" | "party";
 export type PenaltyStyle = "race" | "plinko" | "slot";

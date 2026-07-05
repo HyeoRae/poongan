@@ -2,11 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, DrawState, TeamTotal, PenaltyState } from "@/lib/types";
+import type {
+  Profile,
+  DrawState,
+  TeamTotal,
+  PenaltyState,
+  EventLobby,
+  LobbyPresence,
+} from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
 export function useMyGold(userId: string, initial: number) {
   const [gold, setGold] = useState(initial);
+
+  // 서버가 새 initial 을 내려주면(router.refresh 등) 즉시 반영 —
+  // 실시간 이벤트가 늦거나 누락돼도 셀프 액션(송금·도박·정산 등) 직후
+  // 상단바 잔액이 바로 갱신된다. (useState 는 최초 마운트만 읽으므로 별도 동기화)
+  useEffect(() => {
+    setGold(initial);
+  }, [initial]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -248,6 +262,83 @@ export function useDrawState(initial: DrawState) {
   }, []);
 
   return draw;
+}
+
+// 🛎️ 공용 이벤트 대기실 상태(event_lobby id=1) 실시간 구독 — 전원 동기화
+export function useEventLobby(initial: EventLobby) {
+  const [lobby, setLobby] = useState<EventLobby>(initial);
+
+  // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
+  const applyIfNewer = (next: EventLobby) =>
+    setLobby((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+
+  // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
+  useEffect(() => {
+    applyIfNewer(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("event-lobby-state")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "event_lobby", filter: "id=eq.1" },
+        (payload) => {
+          if (payload.eventType !== "DELETE") {
+            applyIfNewer(payload.new as EventLobby);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return lobby;
+}
+
+// 🛎️ 대기실 Presence — 내 접속을 track 하고, 지금 접속 중인 전원 목록을 반환.
+// 로그인해 앱을 열고 있는 동안 항상 추적하므로(대기실이 닫혀 있어도),
+// 관리자가 대기실을 여는 즉시 로스터가 이미 채워져 있다.
+export function useLobbyPresence(me: LobbyPresence) {
+  const [members, setMembers] = useState<LobbyPresence[]>([me]);
+  const meRef = useRef(me);
+  meRef.current = me;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase.channel("event-lobby-presence", {
+      config: { presence: { key: meRef.current.user_id } },
+    });
+
+    const sync = () => {
+      const state = channel.presenceState<LobbyPresence>();
+      // 같은 user_id 로 여러 탭이 접속해도 1명으로 병합
+      const byUser = new Map<string, LobbyPresence>();
+      for (const key of Object.keys(state)) {
+        for (const p of state[key]) byUser.set(p.user_id, p);
+      }
+      setMembers([...byUser.values()]);
+    };
+
+    channel
+      .on("presence", { event: "sync" }, sync)
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") channel.track(meRef.current);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // user_id 가 바뀔 때만 재구독(로그인 사용자 변경). 표시값은 meRef 로 최신 반영.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me.user_id]);
+
+  return members;
 }
 
 // 벌칙 뽑기 세리머니 상태(penalty_state id=1) 실시간 구독 — 전원 동기화

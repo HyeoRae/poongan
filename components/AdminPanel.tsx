@@ -10,6 +10,7 @@ import {
   resetUserPassword,
   setBotExcluded,
   resetTeams,
+  openEventLobby,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import {
@@ -81,6 +82,9 @@ export default function AdminPanel({
   const [pushTitle, setPushTitle] = useState("");
   const [pushBody, setPushBody] = useState("");
 
+  // 공용 이벤트 대기실 안내 문구
+  const [lobbyTitle, setLobbyTitle] = useState("");
+
   // 벌칙 뽑기
   const [penaltyOutfit, setPenaltyOutfit] = useState<PenaltyOutfit | "">("");
   const [penaltyStyle, setPenaltyStyle] = useState<PenaltyStyle | "">("");
@@ -133,6 +137,28 @@ export default function AdminPanel({
 
       {tab === "event" && (
         <>
+      {/* 🛎️ 공용 이벤트 대기실 */}
+      <section className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
+        <h2 className="mb-1 font-bold">🛎️ 이벤트 대기실</h2>
+        <p className="mb-3 text-xs text-white/50">
+          열면 접속한 모두의 화면에 대기실이 뜨고, <b>지금 접속 중인 사람들</b>이
+          실시간으로 모입니다. 다 모이면 닫고 이벤트를 시작하세요.
+        </p>
+        <input
+          value={lobbyTitle}
+          onChange={(e) => setLobbyTitle(e.target.value)}
+          placeholder="안내 문구 (예: 곧 팀 배정식 시작!) — 선택"
+          className="mb-2 w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-gold"
+        />
+        <button
+          disabled={pending}
+          onClick={() => run(() => openEventLobby(lobbyTitle), { skipRefresh: true })}
+          className="w-full rounded-xl bg-gold py-3 font-black text-black disabled:opacity-50"
+        >
+          🛎️ 대기실 열기
+        </button>
+      </section>
+
       {/* 앱 공개 상태 */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-1 flex items-center justify-between">

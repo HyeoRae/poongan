@@ -5,9 +5,10 @@ import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import DrawCeremony from "@/components/DrawCeremony";
 import PenaltyCeremony from "@/components/PenaltyCeremony";
+import EventLobby from "@/components/EventLobby";
 import NotificationGate from "@/components/NotificationGate";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import type { DrawState, PenaltyState } from "@/lib/types";
+import type { DrawState, PenaltyState, EventLobby as EventLobbyState } from "@/lib/types";
 
 const IDLE_DRAW: DrawState = {
   id: 1,
@@ -27,6 +28,13 @@ const IDLE_PENALTY: PenaltyState = {
   seed: 0,
   slots: 0,
   lobby: [],
+  updated_at: "",
+};
+
+const CLOSED_LOBBY: EventLobbyState = {
+  id: 1,
+  status: "closed",
+  title: null,
   updated_at: "",
 };
 
@@ -53,12 +61,15 @@ export default async function AppLayout({
       .single();
     if (!settings?.is_public) redirect("/locked");
   }
-  const [{ data: drawRow }, { data: penaltyRow }] = await Promise.all([
-    supabase.from("draw_state").select("*").eq("id", 1).single(),
-    supabase.from("penalty_state").select("*").eq("id", 1).single(),
-  ]);
+  const [{ data: drawRow }, { data: penaltyRow }, { data: lobbyRow }] =
+    await Promise.all([
+      supabase.from("draw_state").select("*").eq("id", 1).single(),
+      supabase.from("penalty_state").select("*").eq("id", 1).single(),
+      supabase.from("event_lobby").select("*").eq("id", 1).single(),
+    ]);
   const draw = (drawRow as DrawState) ?? IDLE_DRAW;
   const penalty = (penaltyRow as PenaltyState) ?? IDLE_PENALTY;
+  const eventLobby = (lobbyRow as EventLobbyState) ?? CLOSED_LOBBY;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
@@ -72,6 +83,16 @@ export default async function AppLayout({
       <BottomNav isAdmin={isAdmin} />
       <DrawCeremony isAdmin={isAdmin} initial={draw} />
       <PenaltyCeremony isAdmin={isAdmin} myUserId={profile.id} initial={penalty} />
+      <EventLobby
+        isAdmin={isAdmin}
+        me={{
+          user_id: profile.id,
+          display_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+          is_admin: isAdmin,
+        }}
+        initial={eventLobby}
+      />
       <NotificationGate />
       <ServiceWorkerRegister />
     </div>

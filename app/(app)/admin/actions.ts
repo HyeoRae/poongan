@@ -25,6 +25,26 @@ async function assertAdmin() {
   return { ok: true as const, supabase };
 }
 
+// 🛎️ 공용 이벤트 대기실 열기 — 접속자 전원 화면에 대기실 오버레이 표시.
+// (상태만 DB 로 동기화; 누가 접속했는지는 클라이언트 Realtime Presence 로 다룸)
+// 전파는 realtime 이 담당하므로 revalidate 없이 가볍게 처리.
+export async function openEventLobby(title?: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("open_event_lobby", {
+    p_title: title?.trim() || null,
+  });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "대기실을 열었습니다." };
+}
+
+// 🛎️ 공용 이벤트 대기실 닫기
+export async function closeEventLobby(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("close_event_lobby");
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "대기실을 닫았습니다." };
+}
+
 // 참가자 비밀번호 초기화 — 임시비번(=아이디)으로 되돌리고 재변경 요구
 export async function resetUserPassword(userId: string): Promise<ActionResult> {
   const guard = await assertAdmin();
