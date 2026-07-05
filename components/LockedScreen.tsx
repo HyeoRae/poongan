@@ -16,6 +16,7 @@ const PREP_ITEMS = [
   { id: "toiletry", emoji: "🧴", label: "선크림 · 세면도구" },
   { id: "id", emoji: "🪪", label: "신분증" },
   { id: "charger", emoji: "🔌", label: "충전기" },
+  { id: "swimsuit", emoji: "🩱", label: "수영복" },
 ];
 
 const STORAGE_KEY = "prep-checklist-v1";
