@@ -7,6 +7,7 @@ import { signOut } from "@/app/actions";
 import type { AppSettings, ScheduleItem } from "@/lib/types";
 import ScheduleTimeline from "@/components/ScheduleTimeline";
 import MyProfileCard from "@/components/MyProfileCard";
+import NotificationGate from "@/components/NotificationGate";
 
 // 참가자가 스스로 챙길 준비물
 const PREP_ITEMS = [
@@ -208,6 +209,9 @@ export default function LockedScreen({
       <form action={signOut} className="mt-8 text-center">
         <button className="text-xs text-white/40">로그아웃</button>
       </form>
+
+      {/* 공개 전에도 미리 알림을 켜두게 안내 */}
+      <NotificationGate />
     </main>
   );
 }
