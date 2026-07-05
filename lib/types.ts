@@ -142,6 +142,52 @@ export type AppSettings = {
   updated_at: string;
 };
 
+// ---------- 벌칙 옷 랜덤 뽑기 세리머니 ----------
+export type PenaltyOutfit = "banana" | "clown" | "mario" | "party";
+export type PenaltyStyle = "race" | "plinko" | "slot";
+// lobby: 동물 달리기 대기실(참가자가 선착순 동물 선택 중)
+export type PenaltyStatus = "idle" | "lobby" | "running" | "revealed";
+
+export type PenaltyParticipant = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  animal?: string; // 동물 달리기에서 본인이 고른 동물(이모지)
+};
+
+// 대기실 슬롯 — 동물 1마리당 1명. user_id=null 이면 미선택.
+export type PenaltyLobbySlot = {
+  animal: string;
+  user_id: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+// 싱글톤(id=1) — 전원이 Realtime 구독. 당첨자는 서버가 winner_index 로 확정.
+export type PenaltyState = {
+  id: number;
+  status: PenaltyStatus;
+  style: PenaltyStyle | null;
+  outfit: PenaltyOutfit | null;
+  participants: PenaltyParticipant[];
+  winner_index: number;
+  seed: number;
+  slots: number; // 이번 대기실 동물 수
+  lobby: PenaltyLobbySlot[]; // 대기실 슬롯(선착순 선택 상태)
+  updated_at: string;
+};
+
+// 당첨 이력 (penalty_picks) + 표시용 프로필 조인
+export type PenaltyPick = {
+  id: number;
+  user_id: string;
+  outfit: PenaltyOutfit;
+  style: PenaltyStyle | null;
+  created_at: string;
+  display_name?: string;
+  avatar_url?: string | null;
+};
+
 // ---------- 비밀 역할 (스파이 / 광대) ----------
 // member(일반) | spy(스파이) | jester(광대). 추후 역할이 추가되면 여기에 값을 늘린다.
 export type PlayerRoleKind = "member" | "spy" | "jester";

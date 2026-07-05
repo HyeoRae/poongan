@@ -35,6 +35,32 @@ export const GACHA_STEP = 15; // 뽑을수록 증가폭 (cost = BASE + STEP * pa
 // 등급 추첨 확률 (꽝 40% / 상시 45% / 희귀 15%)
 export const GACHA_ODDS = { blank: 0.4, passive: 0.45, consumable: 0.15 } as const;
 
+// ---------- 벌칙 옷 랜덤 뽑기 (0017_penalty.sql 와 값 일치) ----------
+// 벌칙 옷 메타 — 라벨/이모지/사진 경로. party 만 확장자가 .jpg 임에 주의.
+export const PENALTY_OUTFITS = {
+  banana: { label: "바나나", emoji: "🍌", img: "/penalty/banana.png" },
+  clown: { label: "광대", emoji: "🤡", img: "/penalty/clown.png" },
+  mario: { label: "마리오", emoji: "🍄", img: "/penalty/mario.png" },
+  party: { label: "파티", emoji: "🎉", img: "/penalty/party.jpg" },
+} as const;
+
+// 뽑기 연출 메타 — 라벨/이모지.
+export const PENALTY_STYLES = {
+  race: { label: "동물 달리기", emoji: "🏁" },
+  plinko: { label: "구슬 레이스", emoji: "🔮" },
+  slot: { label: "룰렛 회전", emoji: "🎰" },
+} as const;
+
+// 동물 달리기 대기실에서 고를 수 있는 동물 풀(선택지). 대기실은 이 중 N마리를 노출.
+export const RACE_ANIMALS = [
+  "🐢", "🐇", "🐷", "🐅", "🐛", "🐎", "🦆", "🐥",
+  "🐸", "🐒", "🐔", "🐄", "🦖", "🦔", "🐈", "🐕",
+] as const;
+
+// 대기실 동물 수 범위 (풀 크기를 넘지 않음)
+export const RACE_SLOTS_MIN = 2;
+export const RACE_SLOTS_MAX = RACE_ANIMALS.length;
+
 // 효과 종류 키 (프리셋 effect_key 와 일치)
 export type EffectKey =
   | "payout_boost"

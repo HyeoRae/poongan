@@ -12,8 +12,26 @@ import {
   resetTeams,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
+import {
+  startPenaltyDraw,
+  openPenaltyLobby,
+  resetPenaltyPicks,
+} from "@/app/(app)/admin/penaltyActions";
 import AdminGames from "@/components/AdminGames";
-import type { Profile, Team, AdminGameView } from "@/lib/types";
+import {
+  PENALTY_OUTFITS,
+  PENALTY_STYLES,
+  RACE_SLOTS_MIN,
+  RACE_SLOTS_MAX,
+} from "@/lib/constants";
+import type {
+  Profile,
+  Team,
+  AdminGameView,
+  PenaltyPick,
+  PenaltyOutfit,
+  PenaltyStyle,
+} from "@/lib/types";
 
 export default function AdminPanel({
   players,
@@ -21,12 +39,14 @@ export default function AdminPanel({
   isPublic,
   games,
   schedule,
+  penaltyPicks,
 }: {
   players: Profile[];
   teams: Team[];
   isPublic: boolean;
   games: AdminGameView[];
   schedule: { id: number; day: number; title: string }[];
+  penaltyPicks: PenaltyPick[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -59,7 +79,16 @@ export default function AdminPanel({
   const [pushTitle, setPushTitle] = useState("");
   const [pushBody, setPushBody] = useState("");
 
+  // 벌칙 뽑기
+  const [penaltyOutfit, setPenaltyOutfit] = useState<PenaltyOutfit | "">("");
+  const [penaltyStyle, setPenaltyStyle] = useState<PenaltyStyle | "">("");
+  const [penaltySlots, setPenaltySlots] = useState(8); // 동물 달리기 동물 수
+
   const assigned = players.filter((p) => p.team_id !== null).length;
+  const pickedIds = new Set(penaltyPicks.map((p) => p.user_id));
+  const penaltyPool = players.filter(
+    (p) => !p.is_bot && !pickedIds.has(p.id)
+  ).length;
 
   function run(
     fn: () => Promise<{ ok: boolean; message: string }>,
@@ -179,6 +208,155 @@ export default function AdminPanel({
           >
             ↩️ 배정 초기화 (배정 전으로)
           </button>
+        )}
+      </section>
+
+      {/* 벌칙 옷 랜덤 뽑기 */}
+      <section className="rounded-2xl border border-[#ff5a5a]/40 bg-[#ff5a5a]/5 p-4">
+        <h2 className="mb-1 font-bold">🎭 벌칙 옷 랜덤 뽑기 (실시간 쇼)</h2>
+        <p className="mb-3 text-xs text-white/50">
+          남은 후보 {penaltyPool}명 · 옷과 연출을 고르고 시작하면 모두의 화면에
+          뜹니다. 이미 뽑힌 사람은 제외돼요.
+        </p>
+
+        {/* 옷 선택 */}
+        <p className="mb-1.5 text-xs font-bold text-white/60">1. 이번 벌칙 옷</p>
+        <div className="mb-3 grid grid-cols-4 gap-2">
+          {(Object.keys(PENALTY_OUTFITS) as PenaltyOutfit[]).map((k) => {
+            const o = PENALTY_OUTFITS[k];
+            const on = penaltyOutfit === k;
+            return (
+              <button
+                key={k}
+                onClick={() => setPenaltyOutfit(k)}
+                className={`flex flex-col items-center gap-0.5 rounded-xl border py-2 text-xs font-bold transition-colors ${
+                  on
+                    ? "border-gold bg-gold/20 text-gold"
+                    : "border-border text-white/60"
+                }`}
+              >
+                <span className="text-lg">{o.emoji}</span>
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 연출 선택 */}
+        <p className="mb-1.5 text-xs font-bold text-white/60">2. 뽑기 연출</p>
+        <div className="mb-3 grid grid-cols-3 gap-2">
+          {(Object.keys(PENALTY_STYLES) as PenaltyStyle[]).map((k) => {
+            const s = PENALTY_STYLES[k];
+            const on = penaltyStyle === k;
+            return (
+              <button
+                key={k}
+                onClick={() => setPenaltyStyle(k)}
+                className={`flex flex-col items-center gap-0.5 rounded-xl border py-2 text-xs font-bold transition-colors ${
+                  on
+                    ? "border-gold bg-gold/20 text-gold"
+                    : "border-border text-white/60"
+                }`}
+              >
+                <span className="text-lg">{s.emoji}</span>
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {penaltyStyle === "race" ? (
+          <>
+            <p className="mb-1.5 text-xs font-bold text-white/60">
+              3. 참가 인원(동물 수)
+            </p>
+            <div className="mb-3 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setPenaltySlots((s) => Math.max(RACE_SLOTS_MIN, s - 1))
+                }
+                disabled={penaltySlots <= RACE_SLOTS_MIN}
+                className="h-10 w-10 rounded-xl border border-border text-xl font-black disabled:opacity-40"
+              >
+                −
+              </button>
+              <span className="min-w-[3.5rem] text-center text-2xl font-black tabular-nums">
+                {penaltySlots}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPenaltySlots((s) => Math.min(RACE_SLOTS_MAX, s + 1))
+                }
+                disabled={penaltySlots >= RACE_SLOTS_MAX}
+                className="h-10 w-10 rounded-xl border border-border text-xl font-black disabled:opacity-40"
+              >
+                +
+              </button>
+            </div>
+            <button
+              disabled={pending || !penaltyOutfit}
+              onClick={() => {
+                if (!penaltyOutfit) return;
+                run(() => openPenaltyLobby(penaltyOutfit, penaltySlots), {
+                  skipRefresh: true,
+                });
+              }}
+              className="w-full rounded-xl bg-gold py-3 font-black text-black disabled:opacity-50"
+            >
+              🐾 대기실 열기 ({penaltySlots}마리)
+            </button>
+            <p className="mt-2 text-center text-xs text-white/40">
+              참가자들이 동물을 고른 뒤, 대기실 화면에서 레이스를 시작하세요.
+            </p>
+          </>
+        ) : (
+          <button
+            disabled={pending || !penaltyOutfit || !penaltyStyle}
+            onClick={() => {
+              if (!penaltyOutfit || !penaltyStyle) return;
+              run(() => startPenaltyDraw(penaltyOutfit, penaltyStyle), {
+                skipRefresh: true,
+              });
+            }}
+            className="w-full rounded-xl bg-gold py-3 font-black text-black disabled:opacity-50"
+          >
+            🎬 벌칙 뽑기 시작
+          </button>
+        )}
+
+        {/* 현황 */}
+        {penaltyPicks.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            <p className="text-xs font-bold text-white/60">
+              이번 여행 벌칙 현황
+            </p>
+            <ul className="space-y-1">
+              {penaltyPicks.map((pk) => (
+                <li
+                  key={pk.id}
+                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5 text-sm"
+                >
+                  <span className="font-semibold">{pk.display_name}</span>
+                  <span className="text-white/70">
+                    {PENALTY_OUTFITS[pk.outfit].emoji}{" "}
+                    {PENALTY_OUTFITS[pk.outfit].label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <button
+              disabled={pending}
+              onClick={() => {
+                if (confirm("벌칙 현황을 초기화할까요? 전원 다시 후보가 됩니다."))
+                  run(resetPenaltyPicks);
+              }}
+              className="mt-1 w-full rounded-xl border border-border py-2.5 text-sm font-bold text-white/70 disabled:opacity-50"
+            >
+              🔄 벌칙 현황 초기화
+            </button>
+          </div>
         )}
       </section>
         </>

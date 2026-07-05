@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile, DrawState, TeamTotal } from "@/lib/types";
+import type { Profile, DrawState, TeamTotal, PenaltyState } from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
 export function useMyGold(userId: string, initial: number) {
@@ -248,4 +248,46 @@ export function useDrawState(initial: DrawState) {
   }, []);
 
   return draw;
+}
+
+// 벌칙 뽑기 세리머니 상태(penalty_state id=1) 실시간 구독 — 전원 동기화
+export function usePenaltyState(initial: PenaltyState) {
+  const [penalty, setPenalty] = useState<PenaltyState>(initial);
+
+  // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
+  const applyIfNewer = (next: PenaltyState) =>
+    setPenalty((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+
+  // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
+  useEffect(() => {
+    applyIfNewer(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("penalty-state")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "penalty_state",
+          filter: "id=eq.1",
+        },
+        (payload) => {
+          if (payload.eventType !== "DELETE") {
+            applyIfNewer(payload.new as PenaltyState);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return penalty;
 }

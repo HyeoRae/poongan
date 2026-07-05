@@ -33,3 +33,8 @@ next-env.d.ts
 
 # 실제 계정 정보 (ID/PW) — 절대 커밋 금지
 /supabase/accounts.json
+
+# 개발용 스크래치 (연출 참고 영상·이미지 원본) — 커밋 금지
+/marble_roulette_*.mp4
+/녹음*.mp4
+/game_panalty/

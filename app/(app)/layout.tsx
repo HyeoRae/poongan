@@ -4,15 +4,29 @@ import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import DrawCeremony from "@/components/DrawCeremony";
+import PenaltyCeremony from "@/components/PenaltyCeremony";
 import NotificationGate from "@/components/NotificationGate";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import type { DrawState } from "@/lib/types";
+import type { DrawState, PenaltyState } from "@/lib/types";
 
 const IDLE_DRAW: DrawState = {
   id: 1,
   status: "idle",
   assignments: [],
   revealed_count: 0,
+  updated_at: "",
+};
+
+const IDLE_PENALTY: PenaltyState = {
+  id: 1,
+  status: "idle",
+  style: null,
+  outfit: null,
+  participants: [],
+  winner_index: 0,
+  seed: 0,
+  slots: 0,
+  lobby: [],
   updated_at: "",
 };
 
@@ -39,12 +53,12 @@ export default async function AppLayout({
       .single();
     if (!settings?.is_public) redirect("/locked");
   }
-  const { data: drawRow } = await supabase
-    .from("draw_state")
-    .select("*")
-    .eq("id", 1)
-    .single();
+  const [{ data: drawRow }, { data: penaltyRow }] = await Promise.all([
+    supabase.from("draw_state").select("*").eq("id", 1).single(),
+    supabase.from("penalty_state").select("*").eq("id", 1).single(),
+  ]);
   const draw = (drawRow as DrawState) ?? IDLE_DRAW;
+  const penalty = (penaltyRow as PenaltyState) ?? IDLE_PENALTY;
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
@@ -57,6 +71,7 @@ export default async function AppLayout({
       <main className="flex-1 px-4 py-4">{children}</main>
       <BottomNav isAdmin={isAdmin} />
       <DrawCeremony isAdmin={isAdmin} initial={draw} />
+      <PenaltyCeremony isAdmin={isAdmin} myUserId={profile.id} initial={penalty} />
       <NotificationGate />
       <ServiceWorkerRegister />
     </div>

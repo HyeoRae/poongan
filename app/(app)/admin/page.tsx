@@ -8,6 +8,7 @@ import type {
   BetOption,
   Bet,
   AdminGameView,
+  PenaltyPick,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: players }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }] =
+  const [{ data: players }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }, { data: picksRaw }] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -36,6 +37,10 @@ export default async function AdminPage() {
         .select("id, day, title")
         .order("day")
         .order("sort_order"),
+      supabase
+        .from("penalty_picks")
+        .select("*")
+        .order("created_at", { ascending: false }),
     ]);
 
   const games = (gamesRaw as Game[]) ?? [];
@@ -76,13 +81,27 @@ export default async function AdminPage() {
     };
   });
 
+  const playerList = (players as Profile[]) ?? [];
+  const nameOf = new Map(playerList.map((p) => [p.id, p]));
+  const penaltyPicks: PenaltyPick[] = (
+    (picksRaw as PenaltyPick[]) ?? []
+  ).map((pk) => {
+    const p = nameOf.get(pk.user_id);
+    return {
+      ...pk,
+      display_name: p?.display_name ?? "?",
+      avatar_url: p?.avatar_url ?? null,
+    };
+  });
+
   return (
     <AdminPanel
-      players={(players as Profile[]) ?? []}
+      players={playerList}
       teams={(teams as Team[]) ?? []}
       isPublic={settings?.is_public ?? false}
       games={gameViews}
       schedule={schedule}
+      penaltyPicks={penaltyPicks}
     />
   );
 }
