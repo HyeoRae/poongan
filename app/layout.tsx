@@ -6,7 +6,7 @@ const siteUrl =
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
 const title = "제 4회 풍계모 여름여행";
-const description = "통영-거제 2박3일 · 풍산토큰 대항전 🏝️";
+const description = "통영-거제 2박3일 🏝️";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
