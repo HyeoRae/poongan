@@ -17,12 +17,18 @@ export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: players }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }, { data: picksRaw }] =
+  const [{ data: players }, { data: grantTargetsRaw }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }, { data: picksRaw }] =
     await Promise.all([
       supabase
         .from("profiles")
         .select("*")
         .eq("role", "player")
+        .order("display_name"),
+      // 지급 대상: 관리자 포함 전원 (관리자 → 참가자 순)
+      supabase
+        .from("profiles")
+        .select("*")
+        .order("role")
         .order("display_name"),
       supabase.from("teams").select("*").order("id"),
       supabase.from("app_settings").select("is_public").eq("id", 1).single(),
@@ -97,6 +103,7 @@ export default async function AdminPage() {
   return (
     <AdminPanel
       players={playerList}
+      grantTargets={(grantTargetsRaw as Profile[]) ?? []}
       teams={(teams as Team[]) ?? []}
       isPublic={settings?.is_public ?? false}
       games={gameViews}

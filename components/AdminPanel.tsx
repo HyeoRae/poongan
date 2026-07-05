@@ -35,6 +35,7 @@ import type {
 
 export default function AdminPanel({
   players,
+  grantTargets,
   teams,
   isPublic,
   games,
@@ -42,6 +43,7 @@ export default function AdminPanel({
   penaltyPicks,
 }: {
   players: Profile[];
+  grantTargets: Profile[];
   teams: Team[];
   isPublic: boolean;
   games: AdminGameView[];
@@ -376,9 +378,11 @@ export default function AdminPanel({
             onChange={(e) => setUser(e.target.value)}
           >
             <option value="">참가자 선택</option>
-            {players.map((p) => (
+            {grantTargets.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.display_name} (🪙{p.gold_balance.toLocaleString()})
+                {p.display_name}
+                {p.role === "admin" ? " (관리자)" : ""} (🪙
+                {p.gold_balance.toLocaleString()})
               </option>
             ))}
           </select>
