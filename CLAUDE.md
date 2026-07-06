@@ -17,9 +17,14 @@ npm run seed             # 계정 12명 + 팀 2개 + 샘플 일정 시드 (supab
 npm run seed:schedule    # 일정 데이터만 재시드 (supabase/scheduleData.ts)
 npm run seed:games       # 미니게임 프리셋 시드
 npm run reset            # 데이터 리셋
+npm run test:flows       # 경제 무결성 통합 스모크 (⚠ 테스트 창에서만 — 팀/역할 리셋)
 ```
 
-테스트 프레임워크는 없다. 마이그레이션은 Supabase SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로** 수동 실행한다 (CLI 마이그레이션 도구 미사용). 새 스키마 변경은 다음 번호의 `00NN_*.sql` 파일로 추가한다.
+정식 테스트 프레임워크는 없고, `npm run test:flows`(supabase/testFlows.ts)가 유일한 통합 스모크다. 실제 `check()` assert + `process.exit(fail>0?1:0)`로 CI 판정 가능. 커버리지: 송금 수수료·가챠 비용/무료횟수·fee_half는 `lib/constants.ts` 상수로 기대값을 계산하는 **parity 가드**(SQL 값이 상수와 어긋나면 FAIL) + **풀 정산 팟 보존·잔액=원장 총량 불변식·총공급량 방향성**. 미검증(TODO): 섯다 정산, 동시성. `test1~test10` 계정과 `build_teams/assign_roles`를 강제 실행하므로 프로덕션 금지.
+
+**밸런스 상수 이중관리 주의:** 수수료율·가챠 값 등은 `lib/constants.ts`와 SQL RPC(0016 등)에 각각 존재한다. 값 변경 시 **양쪽을 함께** 고치고 `npm run test:flows`로 parity를 확인한다. SQL 쪽엔 `⚠ lib/constants.ts <상수> 와 값 일치` 역참조 주석이 달려 있다.
+
+마이그레이션은 Supabase SQL Editor에서 `supabase/migrations/`의 파일을 **번호 순서대로** 수동 실행한다 (CLI 마이그레이션 도구 미사용). 새 스키마 변경은 다음 번호의 `00NN_*.sql` 파일로 추가한다.
 
 ## 아키텍처
 
@@ -29,7 +34,7 @@ npm run reset            # 데이터 리셋
 - 사용자에게는 **ID/PW** 만 노출하지만 내부적으로는 Supabase Auth 이메일로 인증한다. `lib/constants.ts`의 `idToEmail()`이 `<id>@<domain>` 으로 매핑 (도메인은 `NEXT_PUBLIC_LOGIN_EMAIL_DOMAIN`). 계정은 관리자가 시드로 사전 생성하며 가입 화면이 없다.
 - 권한은 `profiles.role`: `"admin"` (기획자 2명) | `"player"`.
 - 서버 측 가드는 `lib/auth.ts`: `requireProfile()` (비로그인 → `/login`), `requireAdmin()` (비관리자 → `/dashboard`). 페이지/액션 진입부에서 호출한다.
-- `middleware.ts` → `lib/supabase/middleware.ts`가 세션 쿠키 갱신 + 비로그인 보호 라우트 차단을 담당. **matcher에서 `sw.js`/manifest/이미지를 반드시 제외**해야 한다 (제외 안 하면 서비스워커가 로그인으로 리다이렉트되어 푸시가 깨짐 — v1.01 회귀 사례).
+- `middleware.ts` → `lib/supabase/middleware.ts`가 세션 쿠키 갱신 + 비로그인 보호 라우트 차단을 담당. **matcher에서 `sw.js`/manifest/`offline.html`/이미지를 반드시 제외**해야 한다 (제외 안 하면 서비스워커가 로그인으로 리다이렉트되어 푸시·오프라인 폴백이 깨짐 — v1.01 회귀 사례. `offline.html`은 `sw.js` 프리캐시 대상이라 비로그인 상태에서도 200이어야 함).
 
 ### 풍산토큰 경제 (핵심 불변식)
 모든 토큰 변동은 **Postgres RPC(`SECURITY DEFINER`)를 통해서만** 발생한다. `profiles`/`transactions` 테이블에 직접 INSERT/UPDATE하는 RLS 정책은 **존재하지 않는다** — 클라이언트에서 잔액을 직접 쓸 수 없다.

@@ -6,6 +6,8 @@ import {
   RACE_ANIMALS,
   RACE_SLOTS_MIN,
   RACE_SLOTS_MAX,
+  PENALTY_OUTFITS,
+  PENALTY_STYLES,
 } from "@/lib/constants";
 import { runWinner } from "@/lib/penalty/marbleSim";
 import type {
@@ -19,8 +21,9 @@ import type {
 
 export type ActionResult = { ok: boolean; message: string };
 
-const OUTFITS: PenaltyOutfit[] = ["banana", "clown", "mario", "party"];
-const STYLES: PenaltyStyle[] = ["race", "plinko", "slot"];
+// 키셋은 constants.ts 의 메타 상수에서 파생 — 옷/연출 추가 시 constants 만 고치면 여기도 따라온다.
+const OUTFITS = Object.keys(PENALTY_OUTFITS) as PenaltyOutfit[];
+const STYLES = Object.keys(PENALTY_STYLES) as PenaltyStyle[];
 
 // 호출자가 관리자인지 확인 (penalty_state/picks 는 RLS 로도 막히지만, 깔끔한 메시지용)
 async function assertAdmin() {

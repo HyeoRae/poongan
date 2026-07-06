@@ -1,4 +1,5 @@
 import type { Role, TxType } from "./constants";
+import type { PENALTY_OUTFITS, PENALTY_STYLES } from "./constants";
 
 export type Team = {
   id: number;
@@ -163,8 +164,9 @@ export type LobbyPresence = {
 };
 
 // ---------- 벌칙 옷 랜덤 뽑기 세리머니 ----------
-export type PenaltyOutfit = "banana" | "clown" | "mario" | "party";
-export type PenaltyStyle = "race" | "plinko" | "slot";
+// 키셋은 constants.ts 의 PENALTY_OUTFITS/STYLES 에서 파생(단일 소스). 옷/연출 추가 시 constants 만 고치면 된다.
+export type PenaltyOutfit = keyof typeof PENALTY_OUTFITS;
+export type PenaltyStyle = keyof typeof PENALTY_STYLES;
 // lobby: 동물 달리기 대기실(참가자가 선착순 동물 선택 중)
 export type PenaltyStatus = "idle" | "lobby" | "running" | "revealed";
 

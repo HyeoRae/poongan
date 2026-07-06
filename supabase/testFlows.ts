@@ -1,19 +1,41 @@
 /**
  * Phase 8 — 다중 계정 통합 테스트 & 허점 탐침 (test1~test10)
  *
+ * 검증 항목:
+ *   [0~1]  시드 지급 · 팀/역할 배정(스파이·광대 정확히 1명)
+ *   [2]    송금 수수료 — 기대값을 lib/constants.ts 상수로 계산(SQL parity 가드)
+ *   [3~4]  잔액/원장 RLS 비밀화 · team_totals 공개
+ *   [5~6]  가챠 무료→유료 비용 점증(GACHA_* parity) · 음수 잔액 거부
+ *   [7]    효과카드 소모(fee_free / fee_half parity / peek / ledger)
+ *   [8~9]  통계 무단열람 차단 · 재도전 이중환급 방지
+ *   [10]   ★ 풀 정산 — 팟 보존(토큰 총량 불변) + 파리뮤추얼 배당
+ *   [11]   ★ 잔액 == 거래원장 합 불변식(전원, _apply_gold 정합성)
+ *   [12]   ★ admin_grant 만큼 총 공급량 정확히 증가
+ *   미검증: 섯다 팟 정산, 동시성/경쟁조건 (TODO)
+ *
+ * parity 가드: SQL RPC 의 밸런스 값이 lib/constants.ts 상수와 어긋나면 [2][5][7] 이 FAIL 한다.
+ *
  * ⚠️ 먼저 0014·0015·0016 마이그레이션을 SQL Editor 에 적용한 뒤 실행하세요.
  * ⚠️ 이 스크립트는 test1~test10 계정을 만들고 build_teams/assign_roles 를 강제 실행하므로
- *     실제 이벤트 데이터(팀/역할)를 리셋합니다. 테스트 창에서만 돌리세요.
+ *     실제 이벤트 데이터(팀/역할)를 리셋합니다. 테스트 창에서만 돌리세요(프로덕션 금지).
  *
  * 사용법:
  *   .env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
  *                 NEXT_PUBLIC_SUPABASE_ANON_KEY 필요
- *   npx tsx supabase/testFlows.ts
+ *   npm run test:flows   (= npx tsx supabase/testFlows.ts)
  */
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+// ⚠ 밸런스 상수 parity 가드: 기대값을 여기서 계산해, SQL RPC 가 상수와 어긋나면 테스트가 FAIL 한다.
+import {
+  TRANSFER_FEE_PCT,
+  TRANSFER_FEE_HALF_PCT,
+  GACHA_FREE,
+  GACHA_BASE,
+  GACHA_STEP,
+} from "../lib/constants";
 
 config({ path: ".env.local" });
 
@@ -136,17 +158,24 @@ async function main() {
     );
   }
 
-  // 2) 송금 수수료 20% + 총량 보존
+  // 2) 송금 수수료 + 총량 보존 — 기대값을 TRANSFER_FEE_PCT 로 계산(SQL v_rate 와 parity)
   console.log("\n[2] 송금 수수료");
+  const XFER = 1000;
+  const expFee = Math.floor(XFER * TRANSFER_FEE_PCT);
+  const expRecv = XFER - expFee;
   const aBefore = await balance(uids.test1);
   const bBefore = await balance(uids.test2);
   const t1 = await signIn("test1");
-  const { error: tErr } = await t1.rpc("transfer_gold", { p_to: uids.test2, p_amount: 1000, p_reason: "테스트" });
+  const { error: tErr } = await t1.rpc("transfer_gold", { p_to: uids.test2, p_amount: XFER, p_reason: "테스트" });
   check("송금 성공", !tErr, tErr?.message ?? "");
   const aAfter = await balance(uids.test1);
   const bAfter = await balance(uids.test2);
-  check("보낸이 -1000", aBefore - aAfter === 1000, `(${aBefore - aAfter})`);
-  check("받는이 +800 (수수료 20% 소각)", bAfter - bBefore === 800, `(${bAfter - bBefore})`);
+  check(`보낸이 -${XFER}`, aBefore - aAfter === XFER, `(${aBefore - aAfter})`);
+  check(
+    `받는이 +${expRecv} (수수료 ${TRANSFER_FEE_PCT * 100}% 소각)`,
+    bAfter - bBefore === expRecv,
+    `(${bAfter - bBefore}, 기대 ${expRecv})`
+  );
 
   // 3) 개인 잔액/원장 비밀화 (RLS)
   console.log("\n[3] 잔액 비밀화");
@@ -164,11 +193,12 @@ async function main() {
   const { data: totals } = await t1.from("team_totals").select("*");
   check("team_totals 공개 조회 가능", (totals ?? []).length >= 2);
 
-  // 5) 가챠: 무료 3연차 → 유료 비용 점증
+  // 5) 가챠: 무료 N연차 → 유료 비용 점증 — 기대값을 GACHA_* 상수로 계산(SQL parity)
   console.log("\n[5] 가챠");
   const t3 = await signIn("test3");
+  const nDraws = GACHA_FREE + 2; // 무료 소진 후 유료 2회까지 확인
   const draws: { was_free: boolean; cost: number; blank: boolean }[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < nDraws; i++) {
     const { data, error } = await t3.rpc("draw_effect_card");
     if (error) {
       check(`뽑기 ${i + 1}`, false, error.message);
@@ -176,15 +206,24 @@ async function main() {
     }
     draws.push(data);
   }
-  check("무료 3연차", draws.slice(0, 3).every((d) => d.was_free) && draws[3] && !draws[3].was_free);
-  check("유료 비용 점증(30,45)", draws[3]?.cost === 30 && draws[4]?.cost === 45, `(${draws[3]?.cost},${draws[4]?.cost})`);
+  check(
+    `무료 ${GACHA_FREE}연차`,
+    draws.slice(0, GACHA_FREE).every((d) => d.was_free) && draws[GACHA_FREE] && !draws[GACHA_FREE].was_free
+  );
+  const expCost0 = GACHA_BASE; // 첫 유료(paid_count=0)
+  const expCost1 = GACHA_BASE + GACHA_STEP; // 둘째 유료(paid_count=1)
+  check(
+    `유료 비용 점증(${expCost0},${expCost1})`,
+    draws[GACHA_FREE]?.cost === expCost0 && draws[GACHA_FREE + 1]?.cost === expCost1,
+    `(${draws[GACHA_FREE]?.cost},${draws[GACHA_FREE + 1]?.cost})`
+  );
 
   // 6) 잔액 부족 시 뽑기 거부 (음수 방지)
   console.log("\n[6] 음수 방지");
   const t4 = await signIn("test4");
   await adminC.rpc("admin_grant_gold", { p_user: uids.test4, p_amount: -(await balance(uids.test4)), p_reason: "0으로" });
-  // 무료 3회 소진
-  for (let i = 0; i < 3; i++) await t4.rpc("draw_effect_card");
+  // 무료 뽑기 소진
+  for (let i = 0; i < GACHA_FREE; i++) await t4.rpc("draw_effect_card");
   const { error: broke } = await t4.rpc("draw_effect_card");
   check("잔액 0일 때 유료 뽑기 거부", !!broke, "거부되어야 함");
   check("잔액 음수 아님", (await balance(uids.test4)) >= 0);
@@ -198,6 +237,20 @@ async function main() {
   const b6 = await balance(uids.test6);
   await t5.rpc("transfer_gold", { p_to: uids.test6, p_amount: 1000, p_reason: "무료송금" });
   check("무료송금: 받는이 +1000 (수수료 면제)", (await balance(uids.test6)) - b6 === 1000);
+  // fee_half(큰손): 수수료 절반 — 기대값을 TRANSFER_FEE_HALF_PCT 로 계산(SQL parity)
+  await adminC.rpc("admin_grant_card", { p_user: uids.test8, p_key: "fee_half" });
+  await adminC.rpc("admin_grant_gold", { p_user: uids.test8, p_amount: 5000, p_reason: "테스트" });
+  const t8 = await signIn("test8");
+  const HALF_XFER = 1000;
+  const expHalfRecv = HALF_XFER - Math.floor(HALF_XFER * TRANSFER_FEE_HALF_PCT);
+  const b9 = await balance(uids.test9);
+  await t8.rpc("transfer_gold", { p_to: uids.test9, p_amount: HALF_XFER, p_reason: "큰손송금" });
+  const b9recv = (await balance(uids.test9)) - b9;
+  check(
+    `큰손송금: 받는이 +${expHalfRecv} (수수료 ${TRANSFER_FEE_HALF_PCT * 100}%)`,
+    b9recv === expHalfRecv,
+    `(${b9recv}, 기대 ${expHalfRecv})`
+  );
   // peek
   await adminC.rpc("admin_grant_card", { p_user: uids.test5, p_key: "peek" });
   const { data: peeked, error: peErr } = await t5.rpc("peek_role", { p_target: uids.test1 });
@@ -236,6 +289,86 @@ async function main() {
   } else {
     console.log("  (40판 내 패배 없음 — 재도전 스킵)");
   }
+
+  // 10) 풀(pool) 예측배팅 정산 — 팟 보존(토큰 총량 불변) + 파리뮤추얼 배당
+  console.log("\n[10] 풀 정산");
+  // 서비스롤로 open 상태 게임 + 커스텀 선택지 2개 생성
+  const { data: pg, error: pgErr } = await admin
+    .from("games")
+    .insert({ type: "pool", title: "정산테스트", status: "open", option_source: "custom", config: {} })
+    .select("id")
+    .single();
+  if (pgErr || !pg) {
+    check("풀 게임 생성", false, pgErr?.message ?? "");
+  } else {
+    const { data: opts } = await admin
+      .from("bet_options")
+      .insert([
+        { game_id: pg.id, label: "A", sort_order: 0 },
+        { game_id: pg.id, label: "B", sort_order: 1 },
+      ])
+      .select("id, sort_order");
+    const optA = (opts ?? []).find((o) => o.sort_order === 0)?.id;
+    const optB = (opts ?? []).find((o) => o.sort_order === 1)?.id;
+
+    // 베팅: A에 test1=300·test2=100(우승, winstake=400), B에 test3=200(패). pot=600
+    const p1 = await balance(uids.test1);
+    const p2 = await balance(uids.test2);
+    const p3 = await balance(uids.test3);
+    const t2b = await signIn("test2");
+    await t1.rpc("place_bet", { p_game: pg.id, p_option: optA, p_amount: 300 });
+    await t2b.rpc("place_bet", { p_game: pg.id, p_option: optA, p_amount: 100 });
+    await t3.rpc("place_bet", { p_game: pg.id, p_option: optB, p_amount: 200 });
+
+    const { data: settle, error: sErr } = await adminC.rpc("settle_pool_game", {
+      p_game: pg.id,
+      p_winning_option: optA,
+    });
+    check("풀 정산 성공", !sErr, sErr?.message ?? "");
+    check(
+      "풀 정산: 팟=600 / winstake=400",
+      Number(settle?.pot) === 600 && Number(settle?.winner_stake) === 400,
+      JSON.stringify(settle)
+    );
+
+    const net1 = (await balance(uids.test1)) - p1; // 배당450 - 스테이크300 = +150
+    const net2 = (await balance(uids.test2)) - p2; // 배당150 - 스테이크100 = +50
+    const net3 = (await balance(uids.test3)) - p3; // 배당0   - 스테이크200 = -200
+    // 핵심 불변식: 풀은 토큰을 만들지도 없애지도 않는다 → 참가자 순증감 합 = 0
+    check("풀 정산: 팟 보존(순증감 합 0)", net1 + net2 + net3 === 0, `(${net1}+${net2}+${net3})`);
+    check("풀 정산: 파리뮤추얼 배당(+150/+50)", net1 === 150 && net2 === 50, `(net1=${net1}, net2=${net2})`);
+    check("풀 정산: 패자 스테이크 소실(-200)", net3 === -200, `(${net3})`);
+    // 지급 원장 합 == 팟
+    const { data: paidRows } = await admin.from("bets").select("payout").eq("game_id", pg.id);
+    const paidSum = (paidRows ?? []).reduce((s, r) => s + (r.payout as number), 0);
+    check("풀 정산: 지급합 = 팟(600)", paidSum === 600, `(${paidSum})`);
+  }
+
+  // 11) 잔액 = 원장 총량 불변식 — 지금까지의 모든 변동이 _apply_gold 로만 일어났는지 사후 검증
+  //     (프로필 초기 잔액 0 + 모든 변동이 transactions 에 기록되므로 balance == Σ(amount) 여야 함)
+  console.log("\n[11] 잔액=원장 불변식");
+  let invOk = true;
+  for (const n of names) {
+    const bal = await balance(uids[n]);
+    const { data: txs } = await admin.from("transactions").select("amount").eq("user_id", uids[n]);
+    const sum = (txs ?? []).reduce((s, r) => s + (r.amount as number), 0);
+    if (bal !== sum) {
+      invOk = false;
+      console.log(`  ⚠ ${n}: balance=${bal} ledger=${sum}`);
+    }
+  }
+  check("전원 잔액 == 거래원장 합 (_apply_gold 정합성)", invOk);
+
+  // 12) 총 공급량 방향성 — admin_grant 는 공급을 그만큼 정확히 늘린다
+  console.log("\n[12] 총 공급량");
+  const { data: g0 } = await adminC.rpc("get_global_stats");
+  const GRANT = 777;
+  await adminC.rpc("admin_grant_gold", { p_user: uids.test10, p_amount: GRANT, p_reason: "공급량 테스트" });
+  const { data: g1 } = await adminC.rpc("get_global_stats");
+  const supply0 = Number(g0?.[0]?.total_supply ?? 0);
+  const supply1 = Number(g1?.[0]?.total_supply ?? 0);
+  check("admin_grant 만큼 총공급 증가", supply1 - supply0 === GRANT, `(Δ${supply1 - supply0})`);
+  // TODO(후속): 섯다 팟 정산 정확성, 병렬 송금/동시 도박 등 동시성·경쟁조건 커버리지는 미검증.
 
   console.log(`\n== 결과: ${pass} PASS / ${fail} FAIL ==`);
   process.exit(fail > 0 ? 1 : 0);
