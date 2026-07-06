@@ -24,8 +24,10 @@ export type TxType =
   | "gacha";   // 효과카드 뽑기
 
 // ---------- 경제 상수 ----------
-// 송금 수수료율(20%). 밸런스 조정 시 여기 + 0016 transfer_gold 의 v_rate 를 함께 바꾼다.
+// 송금 수수료율(20%). 밸런스 조정 시 여기 + 0016 transfer_gold 의 v_rate(0.20) 를 함께 바꾼다.
 export const TRANSFER_FEE_PCT = 0.2;
+// 큰손(fee_half) 카드 발동 시 절반 수수료(10%). 0016 transfer_gold 의 v_rate(0.10) 와 값 일치.
+export const TRANSFER_FEE_HALF_PCT = 0.1;
 
 // ---------- 효과카드 가챠 상수 (0016 draw_effect_card 와 값 일치) ----------
 export const GACHA_FREE = 3; // 초기 무료 뽑기 횟수
@@ -33,6 +35,8 @@ export const GACHA_BASE = 30; // 유료 첫 뽑기 비용
 export const GACHA_STEP = 15; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
 
 // 등급 추첨 확률 (꽝 40% / 상시 45% / 희귀 15%)
+// ⚠ 여기는 개별확률(.4/.45/.15)이지만 SQL(0016 draw_effect_card)은 누적 임계값(< 0.40, < 0.85)으로 표현한다.
+//   표기가 달라 눈으로만 대조되니, 값 변경 시 blank→0.40, blank+passive→0.85 로 환산해 SQL 을 맞춘다.
 export const GACHA_ODDS = { blank: 0.4, passive: 0.45, consumable: 0.15 } as const;
 
 // ---------- 벌칙 옷 랜덤 뽑기 (0017_penalty.sql 와 값 일치) ----------

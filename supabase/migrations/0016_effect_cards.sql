@@ -32,7 +32,7 @@ create index if not exists player_effect_cards_user_idx
 
 create table if not exists public.player_gacha (
   user_id     uuid primary key references public.profiles(id) on delete cascade,
-  free_left   int not null default 3,
+  free_left   int not null default 3,                 -- ⚠ lib/constants.ts GACHA_FREE 와 값 일치
   paid_count  int not null default 0
 );
 
@@ -129,11 +129,12 @@ begin
   if v_isfree then
     v_cost := 0;
   else
-    v_cost := 30 + 15 * v_paid;                       -- 비용 점증
+    v_cost := 30 + 15 * v_paid;                       -- 비용 점증. ⚠ lib/constants.ts GACHA_BASE(30)/GACHA_STEP(15) 와 값 일치
     perform public._apply_gold(v_uid, -v_cost, 'gacha', '효과카드 뽑기', v_uid);
   end if;
 
   -- 등급 추첨: 꽝 40% / 상시 45% / 희귀 15%
+  -- ⚠ lib/constants.ts GACHA_ODDS 와 값 일치 (거긴 개별확률 .4/.45/.15, 여긴 누적 임계값 .40/.85 로 환산)
   v_r := random();
   if v_r < 0.40 then
     v_grade := 'blank';
@@ -468,7 +469,7 @@ set search_path = public
 as $$
 declare
   v_from uuid := auth.uid();
-  v_rate numeric := 0.20;
+  v_rate numeric := 0.20;                             -- ⚠ lib/constants.ts TRANSFER_FEE_PCT 와 값 일치
   v_fee  int;
   v_recv int;
 begin
@@ -480,7 +481,7 @@ begin
   end if;
 
   if public._has_passive(v_from, 'fee_half') then
-    v_rate := 0.10;
+    v_rate := 0.10;                                   -- ⚠ lib/constants.ts TRANSFER_FEE_HALF_PCT 와 값 일치
   end if;
   v_fee := floor(p_amount * v_rate);
   -- 수수료가 있을 때만 무료송금 카드를 소모(단락평가 미보장 → 중첩 IF)

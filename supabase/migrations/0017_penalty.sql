@@ -8,8 +8,8 @@
 create table if not exists public.penalty_state (
   id             int primary key default 1,
   status         text not null default 'idle' check (status in ('idle','running','revealed')),
-  style          text check (style in ('race','plinko','slot')),   -- 이번 라운드 연출
-  outfit         text check (outfit in ('banana','clown','mario','party')), -- 이번 라운드 벌칙 옷
+  style          text check (style in ('race','plinko','slot')),   -- 이번 라운드 연출. ⚠ constants.ts PENALTY_STYLES 키와 일치
+  outfit         text check (outfit in ('banana','clown','mario','party')), -- 이번 라운드 벌칙 옷. ⚠ constants.ts PENALTY_OUTFITS 키와 일치
   participants   jsonb not null default '[]'::jsonb,  -- 뽑기 풀(표시 순서) [{user_id,display_name,avatar_url}]
   winner_index   int not null default 0,              -- participants 내 당첨자 인덱스(서버 확정)
   seed           int not null default 0,              -- 전원 동일 애니메이션용 공유 시드
@@ -46,7 +46,7 @@ end $$;
 create table if not exists public.penalty_picks (
   id         serial primary key,
   user_id    uuid not null references public.profiles(id) on delete cascade,
-  outfit     text not null check (outfit in ('banana','clown','mario','party')),
+  outfit     text not null check (outfit in ('banana','clown','mario','party')), -- ⚠ constants.ts PENALTY_OUTFITS 키와 일치
   style      text,
   created_at timestamptz not null default now()
 );
