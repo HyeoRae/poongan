@@ -15,7 +15,7 @@ import Plinko from "@/components/penalty/Plinko";
 import SlotReel from "@/components/penalty/SlotReel";
 import PenaltyLobby from "@/components/penalty/PenaltyLobby";
 import PenaltyReveal from "@/components/penalty/PenaltyReveal";
-import type { PenaltyState } from "@/lib/types";
+import type { PenaltyOutfit, PenaltyState } from "@/lib/types";
 
 export default function PenaltyCeremony({
   isAdmin,
@@ -27,7 +27,9 @@ export default function PenaltyCeremony({
   initial: PenaltyState;
 }) {
   const penalty = usePenaltyState(initial);
-  const { status, style, outfit, participants, seed, lobby } = penalty;
+  const { status, style, outfit, participants, seed, lobby, mode, target_user } =
+    penalty;
+  const isOutfit = mode === "outfit";
   const total = participants?.length ?? 0;
   const winnerIndex = Math.min(Math.max(0, penalty.winner_index), Math.max(0, total - 1));
 
@@ -114,30 +116,51 @@ export default function PenaltyCeremony({
     );
   }
 
-  if (status === "idle" || !style || !outfit || total === 0) return null;
+  if (status === "idle" || !style || total === 0) return null;
 
   const winner = participants[winnerIndex];
-  const outfitMeta = PENALTY_OUTFITS[outfit];
+  // outfit 모드: winner 레인의 user_id 칸에 옷 키가 담겨 있고, 옷 입을 사람은 target_user.
+  const wonOutfit: PenaltyOutfit | null = isOutfit
+    ? ((winner?.user_id as PenaltyOutfit) ?? null)
+    : outfit;
+  const revealPerson = isOutfit ? target_user : winner;
+  const outfitMeta = wonOutfit ? PENALTY_OUTFITS[wonOutfit] : null;
   const styleMeta = PENALTY_STYLES[style];
+
+  // outfit 모드에서 옷이 아직 확정되지 않았는데 reveal 로 넘어갈 대상이 없으면 대기
+  if (!isOutfit && !outfit) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#08080d]/98 backdrop-blur-sm">
-      {/* 헤더 — 이번 벌칙 옷 */}
+      {/* 헤더 — outfit 모드면 대상자, person 모드면 이번 벌칙 옷 */}
       <div className="flex items-center justify-between px-5 pt-5">
-        <h1 className="text-lg font-black text-gold">🎭 벌칙 뽑기</h1>
-        <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-sm font-bold text-gold">
-          {outfitMeta.emoji} {outfitMeta.label}
-        </span>
+        <h1 className="text-lg font-black text-gold">
+          {isOutfit ? "🎭 벌칙 옷 뽑기" : "🎭 벌칙 뽑기"}
+        </h1>
+        {isOutfit ? (
+          target_user && (
+            <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-sm font-bold text-gold">
+              🩲 {target_user.display_name}
+            </span>
+          )
+        ) : (
+          outfitMeta && (
+            <span className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-sm font-bold text-gold">
+              {outfitMeta.emoji} {outfitMeta.label}
+            </span>
+          )
+        )}
       </div>
 
       {/* 본문 */}
       <div className="flex flex-1 flex-col justify-center overflow-hidden px-4">
-        {phase === "reveal" && winner ? (
-          <PenaltyReveal winner={winner} outfit={outfit} />
+        {phase === "reveal" && revealPerson && wonOutfit ? (
+          <PenaltyReveal winner={revealPerson} outfit={wonOutfit} />
         ) : (
           <>
             <p className="mb-3 text-center text-sm text-white/50">
-              {styleMeta.emoji} {styleMeta.label} · 후보 {total}명
+              {styleMeta.emoji} {styleMeta.label} · 후보 {total}
+              {isOutfit ? "벌" : "명"}
             </p>
             {style === "race" && (
               <RaceTrack

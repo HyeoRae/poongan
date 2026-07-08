@@ -43,7 +43,7 @@ export default function PenaltyReveal({
       </div>
 
       <p className="mt-3 text-sm text-white/50">
-        여행 내내 이 옷을 입어야 합니다 😈
+        지금부터 3시간 동안 이 옷을 입어야 합니다 😈
       </p>
 
       <style jsx>{`

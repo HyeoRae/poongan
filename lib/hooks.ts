@@ -9,6 +9,8 @@ import type {
   PenaltyState,
   EventLobby,
   LobbyPresence,
+  QuizState,
+  QuizScore,
 } from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
@@ -339,6 +341,139 @@ export function useLobbyPresence(me: LobbyPresence) {
   }, [me.user_id]);
 
   return members;
+}
+
+// 🧠 퀴즈쇼 진행 상태(quiz_state id=1) 실시간 구독 — 전원 동기화(3·2·1·문제·공개)
+export function useQuizState(initial: QuizState) {
+  const [quiz, setQuiz] = useState<QuizState>(initial);
+
+  // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
+  const applyIfNewer = (next: QuizState) =>
+    setQuiz((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+
+  // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
+  useEffect(() => {
+    applyIfNewer(initial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("quiz-state")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quiz_state", filter: "id=eq.1" },
+        (payload) => {
+          if (payload.eventType !== "DELETE") {
+            applyIfNewer(payload.new as QuizState);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return quiz;
+}
+
+// 🧠 퀴즈 누적 점수표(quiz_scores) 실시간 구독 — 공개 순간 전원 점수 동시 갱신
+export function useQuizScores(initial: QuizScore[]) {
+  const [scores, setScores] = useState<QuizScore[]>(initial);
+
+  useEffect(() => {
+    setScores(initial);
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("quiz-scores")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quiz_scores" },
+        (payload) => {
+          if (payload.eventType === "DELETE") return;
+          const row = payload.new as QuizScore;
+          setScores((prev) => {
+            const exists = prev.some((s) => s.user_id === row.user_id);
+            return exists
+              ? prev.map((s) => (s.user_id === row.user_id ? row : s))
+              : [...prev, row];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return scores;
+}
+
+// 🧠 현재 문제 제출 인원 실시간 카운트 (관리자 전용 — RLS 로 관리자만 전체 답안을 봄).
+// seq 가 바뀌면 0 으로 리셋하고, 새 제출(INSERT)마다 +1.
+export function useQuizAnswerCount(seq: number | null) {
+  const [ids, setIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setIds(new Set());
+  }, [seq]);
+
+  useEffect(() => {
+    if (seq == null) return;
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`quiz-answers-${seq}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "quiz_answers",
+          filter: `seq=eq.${seq}`,
+        },
+        (payload) => {
+          const row = payload.new as { user_id: string };
+          setIds((prev) => {
+            if (prev.has(row.user_id)) return prev;
+            const next = new Set(prev);
+            next.add(row.user_id);
+            return next;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [seq]);
+
+  return ids.size;
+}
+
+// 🎭 벌칙 당첨 이력(penalty_picks) 변동 시 onChange (보통 router.refresh — 조인된 이름 재로드)
+export function usePenaltyPicksRealtime(onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
+  useEffect(() => {
+    const supabase = createClient();
+    const fire = () => cb.current();
+    const channel = supabase
+      .channel("penalty-picks")
+      .on("postgres_changes", { event: "*", schema: "public", table: "penalty_picks" }, fire)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 }
 
 // 벌칙 뽑기 세리머니 상태(penalty_state id=1) 실시간 구독 — 전원 동기화

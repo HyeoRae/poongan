@@ -1,0 +1,362 @@
+<title>풍산11기 여름여행 · 7/5 회의 자료</title>
+<style>
+  :root {
+    --paper: #f5efe2;
+    --paper-2: #ece3d2;
+    --card: #fffdf8;
+    --ink: #21302f;
+    --ink-soft: #4d5f5c;
+    --ink-faint: #8a978f;
+    --line: #ddd2bd;
+    --gold: #c68a1a;
+    --gold-bg: #f6e7c2;
+    --coral: #c9502f;
+    --coral-bg: #f7ddd2;
+    --sage: #2f6d5c;
+    --sage-bg: #d8e8de;
+    --sea: #0e3a3f;
+    --shadow: 0 1px 2px rgba(33,48,47,.06), 0 8px 24px rgba(33,48,47,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0d2124;
+      --paper-2: #0a1a1c;
+      --card: #14312f;
+      --ink: #eef2e9;
+      --ink-soft: #a9bcb4;
+      --ink-faint: #6f857c;
+      --line: #24413e;
+      --gold: #e6b451;
+      --gold-bg: #33301c;
+      --coral: #f08a6c;
+      --coral-bg: #3a231b;
+      --sage: #6fc0a4;
+      --sage-bg: #17352c;
+      --sea: #071416;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #f5efe2; --paper-2: #ece3d2; --card: #fffdf8; --ink: #21302f;
+    --ink-soft: #4d5f5c; --ink-faint: #8a978f; --line: #ddd2bd; --gold: #c68a1a;
+    --gold-bg: #f6e7c2; --coral: #c9502f; --coral-bg: #f7ddd2; --sage: #2f6d5c;
+    --sage-bg: #d8e8de; --sea: #0e3a3f; --shadow: 0 1px 2px rgba(33,48,47,.06), 0 8px 24px rgba(33,48,47,.06);
+  }
+  :root[data-theme="dark"] {
+    --paper: #0d2124; --paper-2: #0a1a1c; --card: #14312f; --ink: #eef2e9;
+    --ink-soft: #a9bcb4; --ink-faint: #6f857c; --line: #24413e; --gold: #e6b451;
+    --gold-bg: #33301c; --coral: #f08a6c; --coral-bg: #3a231b; --sage: #6fc0a4;
+    --sage-bg: #17352c; --sea: #071416; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Pretendard", "Pretendard Variable", -apple-system, "Apple SD Gothic Neo",
+      "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+  .wrap { max-width: 40rem; margin: 0 auto; padding: 0 20px 72px; }
+
+  /* ---- Header ---- */
+  .hero {
+    background:
+      radial-gradient(120% 90% at 85% -10%, rgba(198,138,26,.22), transparent 60%),
+      linear-gradient(165deg, var(--sea), #12474b 70%, #0c3438);
+    color: #f3efe2;
+    margin: 0 -20px 28px;
+    padding: 30px 24px 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  @media (min-width: 44rem) {
+    .hero { margin: 20px -20px 28px; border-radius: 20px; }
+  }
+  .hero::after {
+    content: "";
+    position: absolute; inset: auto 0 0 0; height: 3px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: .72rem; letter-spacing: .16em; text-transform: uppercase;
+    font-weight: 700; color: #e7c37a;
+  }
+  .dcount {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(231,195,122,.4);
+    color: #f2dda6; padding: 2px 9px; border-radius: 999px; letter-spacing: .08em;
+  }
+  .hero h1 {
+    font-size: 1.72rem; line-height: 1.18; margin: 14px 0 6px;
+    font-weight: 800; text-wrap: balance; letter-spacing: -0.02em;
+  }
+  .hero .sub { color: #cfe0d6; font-size: .96rem; margin: 0; }
+  .facts {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 18px;
+  }
+  .fact {
+    display: flex; align-items: baseline; gap: 6px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px; padding: 7px 11px; font-size: .82rem;
+  }
+  .fact b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fact span { color: #b9cdc2; }
+
+  /* ---- Section ---- */
+  section { margin-top: 34px; }
+  .sec-head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+  }
+  .sec-head h2 {
+    font-size: 1.14rem; font-weight: 800; margin: 0; letter-spacing: -0.02em;
+  }
+  .sec-num {
+    font-size: .74rem; font-weight: 800; color: var(--gold);
+    font-variant-numeric: tabular-nums; letter-spacing: .05em;
+    border: 1.5px solid var(--gold); border-radius: 7px;
+    width: 26px; height: 26px; display: grid; place-items: center; flex: none;
+  }
+  .lead { color: var(--ink-soft); font-size: .92rem; margin: -4px 0 16px; }
+
+  /* ---- Agenda (오늘 정할 것) ---- */
+  .agenda { display: flex; flex-direction: column; gap: 10px; }
+  .ag {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 13px;
+    padding: 13px 15px; box-shadow: var(--shadow);
+  }
+  .ag-idx {
+    font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink-faint);
+    font-size: .95rem; width: 1.4em; text-align: center;
+  }
+  .ag-txt { font-weight: 600; font-size: .96rem; line-height: 1.4; }
+  .ag-txt small { display: block; font-weight: 400; color: var(--ink-faint); font-size: .8rem; margin-top: 2px; }
+
+  .chip {
+    font-size: .7rem; font-weight: 800; letter-spacing: .02em;
+    padding: 4px 9px; border-radius: 999px; white-space: nowrap; flex: none;
+  }
+  .c-open { background: var(--coral-bg); color: var(--coral); }
+  .c-check { background: var(--gold-bg); color: var(--gold); }
+  .c-fixed { background: var(--sage-bg); color: var(--sage); }
+  .c-secret { background: var(--paper-2); color: var(--ink-soft); border: 1px dashed var(--line); }
+  .mini {
+    display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+    color: var(--ink-soft); background: var(--paper-2); border: 1px dashed var(--line);
+    padding: 1px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* ---- Timeline ---- */
+  .day {
+    margin-top: 18px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 15px; overflow: hidden; box-shadow: var(--shadow);
+  }
+  .day-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    padding: 13px 16px; background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+  }
+  .day-head .d { font-weight: 800; font-size: .98rem; }
+  .day-head .d span { color: var(--gold); }
+  .day-head .place { font-size: .78rem; color: var(--ink-soft); font-weight: 600; }
+  .tl { list-style: none; margin: 0; padding: 6px 0; }
+  .tl li {
+    display: grid; grid-template-columns: 3.6rem 1fr; gap: 12px;
+    padding: 8px 16px; position: relative;
+  }
+  .tl .t {
+    font-variant-numeric: tabular-nums; font-size: .82rem; color: var(--ink-soft);
+    font-weight: 700; padding-top: 1px;
+  }
+  .tl .ev { font-size: .93rem; }
+  .tl .ev small { display: block; color: var(--ink-faint); font-size: .78rem; }
+  .tl .rail {
+    border-left: 2px solid var(--line); padding-left: 12px; margin-left: -1px;
+  }
+  .tl li.gap .ev { color: var(--coral); font-weight: 700; }
+  .tl li.gap .rail { border-left-color: var(--coral); border-left-style: dashed; }
+  .tl li.hi .ev b { color: var(--gold); }
+
+  /* ---- Detail cards ---- */
+  .cards { display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 15px 16px; box-shadow: var(--shadow);
+  }
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .card-top h3 { margin: 0; font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--ink-soft); font-size: .9rem; }
+  .card ul { margin: 9px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .card ul li {
+    position: relative; padding-left: 20px; font-size: .9rem; color: var(--ink);
+  }
+  .card ul li::before {
+    content: ""; position: absolute; left: 4px; top: .58em;
+    width: 6px; height: 6px; border-radius: 2px; background: var(--gold);
+  }
+  .card ul li.q::before { background: var(--coral); }
+  .decide {
+    margin-top: 11px; padding-top: 10px; border-top: 1px dashed var(--line);
+    font-size: .84rem; color: var(--ink-soft);
+  }
+  .decide b { color: var(--ink); font-weight: 700; }
+
+  /* ---- Prep ---- */
+  .prep { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 10px; }
+  .prep-item {
+    display: flex; align-items: center; gap: 10px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow);
+  }
+  .prep-item .em { font-size: 1.25rem; line-height: 1; }
+  .prep-item .lb { font-size: .87rem; font-weight: 600; }
+  .prep-note {
+    margin-top: 12px; font-size: .85rem; color: var(--ink-soft);
+    background: var(--gold-bg); border-radius: 11px; padding: 11px 14px;
+    border: 1px solid var(--line);
+  }
+  .prep-note b { color: var(--gold); }
+
+  /* ---- Footer ---- */
+  .foot {
+    margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line);
+    color: var(--ink-faint); font-size: .82rem; text-align: center; line-height: 1.7;
+  }
+  .foot b { color: var(--ink-soft); }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">풍산11기 여름여행 · 사전회의 <span class="dcount">출발 D-5</span></span>
+    <h1>통영·거제 2박3일<br>막판 점검 회의</h1>
+    <p class="sub">7월 5일 · 현재 확정 일정 기준으로 남은 결정만 추립니다.</p>
+    <div class="facts">
+      <div class="fact"><b>7/10–7/12</b><span>2박3일</span></div>
+      <div class="fact"><span>이동</span><b>스타리아 1대 · 12명</b></div>
+      <div class="fact"><span>거점</span><b>거제 → 통영</b></div>
+      <div class="fact"><span>집합</span><b>7/10 11:00 부산역</b></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">1</span><h2>핵심 요약</h2></div>
+    <p class="lead">큰 일정·예약은 다 잡혔습니다. 🔒 표시는 당일 공개할 <b>서프라이즈</b></p>
+    <div class="agenda">
+      <div class="ag"><span class="ag-idx">1</span><span class="ag-txt">2일차 저녁 · 통영 다찌집<small>싱싱한 해산물 상다리 코스 · 어디인지는 당일 공개</small></span><span class="chip c-secret">🔒 미공개</span></div>
+      <div class="ag"><span class="ag-idx">2</span><span class="ag-txt">거제 점심 식당<small>1일차 11~13시 · 장소는 당일 공개</small></span><span class="chip c-secret">🔒 미공개</span></div>
+      <div class="ag"><span class="ag-idx">3</span><span class="ag-txt">액티비티 3종 예약 완료<small>패들보트·스노클링 / 선상낚시 / 온천</small></span><span class="chip c-fixed">확정</span></div>
+      <div class="ag"><span class="ag-idx">4</span><span class="ag-txt">이동 — 스타리아 1대 · 12명 전원<small>다 같이 한 차로 꾹꾹 눌러 탑니다 🚐</small></span><span class="chip c-fixed">확정</span></div>
+      <div class="ag"><span class="ag-idx">5</span><span class="ag-txt">BBQ·2차 파티<small></small></span><span class="chip c-secret">🔒 미공개</span></div>
+      <div class="ag"><span class="ag-idx">6</span><span class="ag-txt">앱 공개 시점<small>현재 잠금(공개 전) 상태</small></span><span class="chip c-check">확인필요</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">2</span><h2>현재 확정 일정</h2></div>
+    <p class="lead">🔒 표시된 곳은 당일 공개할 장소 시각은 참고용.</p>
+
+    <div class="day">
+      <div class="day-head"><span class="d">1일차 <span>7/10 (금)</span></span><span class="place">부산 → 거제</span></div>
+      <ul class="tl">
+        <li><span class="t">08:00</span><div class="ev rail">부산역 집합 · 차량 렌트 · 거제 출발<small>스타리아 한 대</small></div></li>
+        <li><span class="t">11:00</span><div class="ev rail">거제 식당 도착</div></li>
+        <li><span class="t">13:00</span><div class="ev rail">점심 식사 <span class="mini">🔒 미공개</span></div></li>
+        <li><span class="t">14:00</span><div class="ev rail">숙소 이동 · 짐 정리<small>거제시 남부면 다대2길 66</small></div></li>
+        <li class="hi"><span class="t">15:00</span><div class="ev rail">🏄 <b>서프앤 윤돌섬</b> 패들보트 + 스노클링<small>거제시 일운면 구조라로4길 15</small></div></li>
+        <li><span class="t">18:00</span><div class="ev rail">숙소 복귀 · 바베큐 준비</div></li>
+        <li class="hi"><span class="t">19:00</span><div class="ev rail">🍖 <b>바베큐 파티</b></div></li>
+        <li><span class="t">20:40</span><div class="ev rail">저녁 컨텐츠 · 2차 파티</div></li>
+      </ul>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="d">2일차 <span>7/11 (토)</span></span><span class="place">거제 → 통영</span></div>
+      <ul class="tl">
+        <li><span class="t">07:00</span><div class="ev rail">기상 · 선상낚시 장소로 이동<small>와현유람선 선착장 앞</small></div></li>
+        <li class="hi"><span class="t">08:30</span><div class="ev rail">🎣 <b>선상 낚시</b> · 선상라면</div></li>
+        <li><span class="t">12:00</span><div class="ev rail">점심 — 낚시한 물고기</div></li>
+        <li class="hi"><span class="t">13:00</span><div class="ev rail">♨️ <b>온천</b><small>거제시 양정동 976-14</small></div></li>
+        <li><span class="t">15:00</span><div class="ev rail">통영 숙소 이동 (제이힐펜션)<small>통영시 용남면 장평리 738</small></div></li>
+        <li class="hi"><span class="t">18:00</span><div class="ev rail">🍶 <b>통영 다찌집</b> <span class="mini">🔒 장소 미공개</span><small>해산물 상다리 코스 — 이번 여행 마지막 밤</small></div></li>
+      </ul>
+    </div>
+
+    <div class="day">
+      <div class="day-head"><span class="d">3일차 <span>7/12 (일)</span></span><span class="place">통영 → 부산</span></div>
+      <ul class="tl">
+        <li><span class="t">~11:00</span><div class="ev rail">기상 · 외출 준비 · 해장라면</div></li>
+        <li><span class="t">11:00</span><div class="ev rail">카페에서 담소</div></li>
+        <li><span class="t">12:30</span><div class="ev rail">부산 이동</div></li>
+        <li><span class="t">14:30</span><div class="ev rail">각자 귀가</div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">3</span><h2>상세</h2></div>
+    <p class="lead">빨간 점은 회의에서 답을 낼 질문, 나머지는 확정·미공개 안내입니다.</p>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-top"><h3>① 예약 현황</h3><span class="chip c-fixed">확정</span></div>
+        <p>큰 일정은 모두 예약 완료. 식당은 장소만 당일 공개합니다.</p>
+        <ul>
+          <li>🏄 패들보트 + 스노클링 — 예약 완료</li>
+          <li>🎣 선상 낚시 (선상라면) — 예약 완료</li>
+          <li>♨️ 온천 — 예약 필요없음</li>
+          <li>🍽️ 1일차 거제 점심 · 🍶 통영 다찌집 — <b>장소 미공개</b> (당일 공개)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-top"><h3>② 이동 · 차량</h3><span class="chip c-fixed">확정</span></div>
+        <p>스타리아 한 대에 12명 전원 탑승. 다 같이 꾹꾹 눌러 타고 다닙니다 🚐</p>
+        <ul>
+          <li>7/10 11:00 부산역 집합 → 차량 렌트 → 거제 출발</li>
+          <li>짐은 최소화 — 캐리어보다 배낭/더플백 권장</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-top"><h3>③ BBQ · 2차 파티</h3><span class="chip c-secret">🔒 미공개</span></div>
+        <p>1일차 저녁 하이라이트. 고기·술·불판 등 세부 준비는 다같이 합니다!</p>
+      </div>
+
+      <div class="card">
+        <div class="card-top"><h3>④ 앱 공개 시점</h3><span class="chip c-check">확인필요</span></div>
+        <p>현재 앱은 <b>공개 전(잠금)</b> 상태. 참가자는 준비물·일정만 보이고, 풍산토큰·게임은 잠겨 있습니다.</p>
+        <ul>
+          <li class="q">언제 공개할까?</li>
+          <li class="q">공개 시 푸시 안내 문구 · 초기 토큰 지급</li>
+        </ul>
+        <div class="decide"><b>결정:</b> 공개 D-day와 담당(기획 2인) 지정</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">4</span><h2>개인 준비물</h2></div>
+    <p class="lead">각자 챙길 것 — 앱 잠금화면 체크리스트와 동일합니다.</p>
+    <div class="prep">
+      <div class="prep-item"><span class="em">🩲</span><span class="lb">속옷 · 양말 3벌</span></div>
+      <div class="prep-item"><span class="em">👕</span><span class="lb">편한 옷 · 신발</span></div>
+      <div class="prep-item"><span class="em">🧴</span><span class="lb">선크림 · 세면도구</span></div>
+      <div class="prep-item"><span class="em">🪪</span><span class="lb">신분증</span></div>
+      <div class="prep-item"><span class="em">🔌</span><span class="lb">충전기</span></div>
+      <div class="prep-item"><span class="em">🏊</span><span class="lb">수영복 · 방수백</span></div>
+    </div>
+    <p class="prep-note"><b>물놀이·낚시 있음.</b> 수영복·여벌 옷·멀미약·모자를 추가로 챙기고, 아이폰은 <b>홈 화면에 추가한 앱 아이콘</b>으로 열어야 푸시 알림이 옵니다.</p>
+  </section>
+
+  <div class="foot">
+    풍산11기 여름여행 · 통영·거제 2박3일<br>
+    <b>7/5 사전회의 자료</b> — 현재 확정 일정 기준으로 남은 결정만 정리
+  </div>
+</div>

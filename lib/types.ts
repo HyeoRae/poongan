@@ -185,6 +185,9 @@ export type PenaltyLobbySlot = {
   avatar_url: string | null;
 };
 
+// person: 사람 랜덤(기존 뽑기) | outfit: 사람 고정 + 옷 랜덤(퀴즈 최저점자 벌칙 옷 파칭코)
+export type PenaltyMode = "person" | "outfit";
+
 // 싱글톤(id=1) — 전원이 Realtime 구독. 당첨자는 서버가 winner_index 로 확정.
 export type PenaltyState = {
   id: number;
@@ -196,6 +199,8 @@ export type PenaltyState = {
   seed: number;
   slots: number; // 이번 대기실 동물 수
   lobby: PenaltyLobbySlot[]; // 대기실 슬롯(선착순 선택 상태)
+  mode: PenaltyMode; // 'outfit' 이면 participants=옷 레인, target_user=옷 입을 사람
+  target_user: PenaltyParticipant | null; // outfit 모드 고정 대상
   updated_at: string;
 };
 
@@ -206,6 +211,7 @@ export type PenaltyPick = {
   outfit: PenaltyOutfit;
   style: PenaltyStyle | null;
   created_at: string;
+  expires_at: string | null; // 착용 만료(당첨 + 3시간). 과거 이력은 null.
   display_name?: string;
   avatar_url?: string | null;
 };
@@ -349,4 +355,59 @@ export type SutdaHand = {
 export type SutdaRoomListItem = SutdaRoom & {
   player_count: number;
   joined: boolean;
+};
+
+// ---------- 🧠 실시간 스피드 퀴즈쇼 ----------
+export type QuizStatus = "idle" | "question" | "reveal" | "finished";
+export type QuizPhase = "main" | "tiebreak";
+
+// 문제별 채점 상세(quiz_reveal main 스냅샷)
+export type QuizAnswerResult = {
+  user_id: string;
+  choice: number;
+  correct: boolean;
+  rank: number | null; // 정답자 속도 순번(1,2,3…)
+  score: number;
+};
+
+// quiz_reveal / quiz_finish 이 last_result 에 남기는 스냅샷 (phase 로 분기)
+export type QuizResult =
+  | { phase: "main"; seq: number; answer_idx: number; answers: QuizAnswerResult[] }
+  | { phase: "tiebreak"; seq: number; answer_idx: number; survivors: string[]; participants: string[] }
+  | { phase: "finish_tie"; needs_tiebreak: true; tied: string[]; min: number }
+  | {
+      phase: "finished";
+      loser: string;
+      ranking: { user_id: string; total: number; correct_count: number }[];
+    };
+
+// 싱글톤(id=1) — 전원이 Realtime 구독. 상태머신 전체를 한 행에.
+export type QuizState = {
+  id: number;
+  status: QuizStatus;
+  phase: QuizPhase;
+  current_seq: number | null;
+  question_started_at: string | null; // 문제 오픈 서버시각(=트리거+3초). 3·2·1 기준점
+  question_deadline: string | null; // started_at + 30초
+  round_seqs: number[] | null; // 이번 라운드에 뽑힌 본게임 문제 순서(100문제 중 랜덤 10). idle이면 null
+  tiebreak_user_ids: string[] | null;
+  last_result: QuizResult | null;
+  updated_at: string;
+};
+
+// quiz_current() 반환 — question 중엔 answer_idx 없음(정답 격리), reveal 후에만 포함.
+export type QuizQuestionPublic = {
+  seq: number;
+  kind: "main" | "tiebreak";
+  prompt: string;
+  choices: string[];
+  answer_idx?: number;
+};
+
+// 누적 점수표 (quiz_scores)
+export type QuizScore = {
+  user_id: string;
+  total: number;
+  correct_count: number;
+  updated_at: string;
 };

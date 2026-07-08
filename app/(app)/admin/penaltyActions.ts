@@ -113,6 +113,8 @@ export async function startPenaltyDraw(
       participants,
       winner_index,
       seed,
+      mode: "person",
+      target_user: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);
@@ -120,6 +122,62 @@ export async function startPenaltyDraw(
 
   revalidatePath("/admin");
   return { ok: true, message: "" };
+}
+
+// 🎭 벌칙 옷 파칭코 (사람 고정 + 옷 랜덤): 퀴즈 최저점자에게 남은 옷 중 하나를 파칭코로.
+// participants 를 사람이 아닌 "남은 옷 레인"으로 채워 기존 Plinko 연출을 그대로 재사용한다.
+export async function startOutfitPachinko(userId: string): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  const supabase = guard.supabase;
+
+  // 대상자 공개 정보(이름/아바타)
+  const { data: profs } = await supabase.rpc("list_public_profiles");
+  const target = ((profs as { id: string; display_name: string; avatar_url: string | null }[]) ?? [])
+    .find((p) => p.id === userId);
+  if (!target) return { ok: false, message: "대상자를 찾을 수 없습니다." };
+
+  // 남은 옷 = 전체 - 이미 뽑힌 옷 (4게임 중복 없음)
+  const { data: picks } = await supabase.from("penalty_picks").select("outfit");
+  const usedOutfits = new Set(
+    ((picks as { outfit: PenaltyOutfit }[]) ?? []).map((p) => p.outfit)
+  );
+  const remaining = OUTFITS.filter((o) => !usedOutfits.has(o));
+  if (remaining.length === 0)
+    return { ok: false, message: "남은 벌칙 옷이 없습니다. 벌칙 현황을 초기화하세요." };
+
+  // 옷 레인(표시 순서 셔플) — user_id 칸에 옷 키를 담아 재사용
+  const lanes: PenaltyParticipant[] = shuffle(remaining).map((o) => ({
+    user_id: o, // 옷 키
+    display_name: PENALTY_OUTFITS[o].label,
+    avatar_url: PENALTY_OUTFITS[o].img,
+  }));
+  const seed = newSeed();
+  const winner_index =
+    lanes.length === 1 ? 0 : runWinner(seed, lanes.length);
+
+  const { error } = await supabase
+    .from("penalty_state")
+    .update({
+      status: "running",
+      style: "plinko" satisfies PenaltyStyle,
+      outfit: null, // 아직 미확정 — 파칭코로 뽑는 중
+      participants: lanes,
+      winner_index,
+      seed,
+      mode: "outfit",
+      target_user: {
+        user_id: target.id,
+        display_name: target.display_name,
+        avatar_url: target.avatar_url,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin");
+  return { ok: true, message: `${target.display_name}님 벌칙 옷 뽑기 시작!` };
 }
 
 // 동물 달리기 대기실 열기: 옷/동물수 지정 → 빈 슬롯 N개로 status='lobby'.
@@ -160,6 +218,8 @@ export async function openPenaltyLobby(
       participants: [],
       winner_index: 0,
       seed: 0,
+      mode: "person",
+      target_user: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);
@@ -216,6 +276,8 @@ export async function startPenaltyRace(): Promise<ActionResult> {
       participants,
       winner_index,
       seed: newSeed(),
+      mode: "person",
+      target_user: null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);
@@ -263,7 +325,11 @@ export async function rerollPenalty(): Promise<ActionResult> {
   return { ok: true, message: "" };
 }
 
-// 확정: 현재 당첨자를 이력에 기록(다음 풀에서 제외) → revealed
+// 착용 시간(당첨 후 이 시간 동안 벌칙 옷 착용). "하루종일은 가혹" → 3시간으로 변경됨.
+const PENALTY_WEAR_HOURS = 3;
+
+// 확정: 현재 당첨자를 이력에 기록(다음 풀에서 제외) → revealed. 착용 만료(+3시간)도 기록.
+// outfit 모드면 "옷 입을 사람=target_user, 당첨 옷=winner 레인"으로 뒤집어 기록한다.
 export async function confirmPenaltyPick(): Promise<ActionResult> {
   const guard = await assertAdmin();
   if (!guard.ok) return guard;
@@ -271,34 +337,81 @@ export async function confirmPenaltyPick(): Promise<ActionResult> {
 
   const { data, error } = await supabase
     .from("penalty_state")
-    .select("participants, winner_index, outfit, style, status")
+    .select("participants, winner_index, outfit, style, status, mode, target_user")
     .eq("id", 1)
     .single();
   if (error) return { ok: false, message: error.message };
 
   const state = data as Pick<
     PenaltyState,
-    "participants" | "winner_index" | "outfit" | "style" | "status"
+    | "participants"
+    | "winner_index"
+    | "outfit"
+    | "style"
+    | "status"
+    | "mode"
+    | "target_user"
   >;
   const winner = state.participants?.[state.winner_index];
   if (!winner) return { ok: false, message: "당첨자가 없습니다." };
-  if (!state.outfit) return { ok: false, message: "옷 정보가 없습니다." };
+
+  // 모드별로 "누가(wearerId)" + "무슨 옷(wonOutfit)" 을 결정
+  let wearerId: string;
+  let wearerName: string;
+  let wonOutfit: PenaltyOutfit;
+  if (state.mode === "outfit") {
+    if (!state.target_user) return { ok: false, message: "대상자 정보가 없습니다." };
+    wearerId = state.target_user.user_id;
+    wearerName = state.target_user.display_name;
+    wonOutfit = winner.user_id as PenaltyOutfit; // 레인의 user_id 칸에 옷 키가 담겨 있음
+  } else {
+    if (!state.outfit) return { ok: false, message: "옷 정보가 없습니다." };
+    wearerId = winner.user_id;
+    wearerName = winner.display_name;
+    wonOutfit = state.outfit;
+  }
+
+  const expiresAt = new Date(
+    Date.now() + PENALTY_WEAR_HOURS * 60 * 60 * 1000
+  ).toISOString();
 
   const { error: iErr } = await supabase.from("penalty_picks").insert({
-    user_id: winner.user_id,
-    outfit: state.outfit,
+    user_id: wearerId,
+    outfit: wonOutfit,
     style: state.style,
+    expires_at: expiresAt,
   });
   if (iErr) return { ok: false, message: iErr.message };
 
+  // outfit 모드는 확정된 옷을 state.outfit 에도 채워 넣어 reveal 카드가 옷을 표시
   const { error: uErr } = await supabase
     .from("penalty_state")
-    .update({ status: "revealed", updated_at: new Date().toISOString() })
+    .update({
+      status: "revealed",
+      outfit: wonOutfit,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", 1);
   if (uErr) return { ok: false, message: uErr.message };
 
   revalidatePath("/admin");
-  return { ok: true, message: `${winner.display_name}님 벌칙 확정!` };
+  return {
+    ok: true,
+    message: `${wearerName}님 → ${PENALTY_OUTFITS[wonOutfit].label} 옷 (3시간) 확정!`,
+  };
+}
+
+// 벌칙 조기 해제(관리자): 만료 시각을 지금으로 당겨 착용 종료.
+export async function endPenaltyEarly(pickId: number): Promise<ActionResult> {
+  const guard = await assertAdmin();
+  if (!guard.ok) return guard;
+  const { error } = await guard.supabase
+    .from("penalty_picks")
+    .update({ expires_at: new Date().toISOString() })
+    .eq("id", pickId);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  return { ok: true, message: "벌칙을 조기 해제했습니다." };
 }
 
 // 세리머니 닫기

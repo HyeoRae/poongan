@@ -28,6 +28,8 @@ const IDLE_PENALTY: PenaltyState = {
   seed: 0,
   slots: 0,
   lobby: [],
+  mode: "person",
+  target_user: null,
   updated_at: "",
 };
 

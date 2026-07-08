@@ -19,6 +19,7 @@ import {
   resetPenaltyPicks,
 } from "@/app/(app)/admin/penaltyActions";
 import AdminGames from "@/components/AdminGames";
+import PenaltyTracker from "@/components/PenaltyTracker";
 import {
   PENALTY_OUTFITS,
   PENALTY_STYLES,
@@ -238,6 +239,9 @@ export default function AdminPanel({
           </button>
         )}
       </section>
+
+      {/* 🩲 벌칙 옷 현황판 (누가 무슨 옷, 남은시간) */}
+      <PenaltyTracker picks={penaltyPicks} />
 
       {/* 벌칙 옷 랜덤 뽑기 */}
       <section className="rounded-2xl border border-[#ff5a5a]/40 bg-[#ff5a5a]/5 p-4">

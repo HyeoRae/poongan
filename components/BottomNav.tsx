@@ -17,7 +17,7 @@ const items: NavItem[] = [
     href: "/play",
     label: "컨텐츠",
     icon: "🎲",
-    match: ["/play", "/games", "/sutda", "/gamble"],
+    match: ["/play", "/games", "/quiz", "/sutda", "/gamble"],
   },
   { href: "/wallet", label: "지갑", icon: "💰" },
 ];
