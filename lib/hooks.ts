@@ -9,6 +9,7 @@ import type {
   PenaltyState,
   EventLobby,
   LobbyPresence,
+  LobbyMember,
   QuizState,
   QuizScore,
 } from "@/lib/types";
@@ -339,6 +340,42 @@ export function useLobbyPresence(me: LobbyPresence) {
     // user_id 가 바뀔 때만 재구독(로그인 사용자 변경). 표시값은 meRef 로 최신 반영.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me.user_id]);
+
+  return members;
+}
+
+// 🛎️ 대기실 입장자 명단(event_lobby_members) 실시간 구독.
+// 명시적으로 입장한 사람만 담긴다(Presence 와 달리 durable). 변경 시 전체 재조회(소규모 테이블).
+export function useLobbyMembers() {
+  const [members, setMembers] = useState<LobbyMember[]>([]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    const refetch = () =>
+      supabase
+        .from("event_lobby_members")
+        .select("*")
+        .order("joined_at", { ascending: true })
+        .then(({ data }) => {
+          if (active && data) setMembers(data as LobbyMember[]);
+        });
+
+    refetch(); // 초기 로드
+    const channel = supabase
+      .channel("event-lobby-members")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "event_lobby_members" },
+        () => refetch()
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return members;
 }

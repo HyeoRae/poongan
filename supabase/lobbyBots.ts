@@ -76,9 +76,9 @@ async function provision(username: string, displayName: string) {
   return user!.id;
 }
 
-// 봇 하나: 로그인 → 대기실 프레즌스 track → 퀴즈 자동응답 루프.
+// 봇 하나: 로그인 → 대기실이 열리면 자동 입장(join) → 퀴즈 자동응답 루프.
 async function runBot(username: string, displayName: string) {
-  const uid = await provision(username, displayName);
+  await provision(username, displayName);
   const sb: SupabaseClient = createClient(URL, ANON, {
     auth: { autoRefreshToken: true, persistSession: false },
   });
@@ -90,26 +90,30 @@ async function runBot(username: string, displayName: string) {
     console.error(`❌ ${displayName} 로그인 실패:`, aerr.message);
     return;
   }
+  console.log(`🤖 ${displayName} 로그인 — 대기실 열리면 자동 입장`);
 
-  // ── 대기실 Presence ── (웹앱 useLobbyPresence 와 동일한 채널/페이로드)
-  const presence = sb.channel("event-lobby-presence", {
-    config: { presence: { key: uid } },
-  });
-  presence.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      presence.track({
-        user_id: uid,
-        display_name: displayName,
-        avatar_url: null,
-        is_admin: false,
-      });
-    }
-  });
-  console.log(`🤖 ${displayName} 접속 — 대기실 대기 중`);
-
-  // ── 퀴즈 자동응답 루프 (quiz_state 폴링) ──
+  // ── 대기실 입장 + 퀴즈 자동응답 루프 (event_lobby / quiz_state 폴링) ──
   let answeredSeq = -1;
+  let joinedForOpen = false; // 이번 open 세션에 입장했는지 (닫히면 리셋 → 재오픈 시 재입장)
   for (;;) {
+    // 대기실이 열려 있으면 입장(멱등). 닫히면 다음 오픈을 위해 플래그 리셋.
+    const { data: lob } = await sb
+      .from("event_lobby")
+      .select("status")
+      .eq("id", 1)
+      .maybeSingle();
+    if (lob?.status === "open") {
+      if (!joinedForOpen) {
+        const { error } = await sb.rpc("join_event_lobby");
+        if (!error) {
+          joinedForOpen = true;
+          console.log(`  🛎️ ${displayName} 대기실 입장`);
+        }
+      }
+    } else {
+      joinedForOpen = false;
+    }
+
     const { data: st } = await sb
       .from("quiz_state")
       .select("status,current_seq,question_started_at,question_deadline")

@@ -164,6 +164,16 @@ export type LobbyPresence = {
   is_admin: boolean;
 };
 
+// 🛎️ 대기실 "입장자" — 명시적으로 입장(join)한 사람. durable(event_lobby_members).
+// 퀴즈 시작 시 이 명단이 곧 참가자·최저점·벌칙 후보가 된다.
+export type LobbyMember = {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  is_admin: boolean;
+  joined_at?: string;
+};
+
 // ---------- 벌칙 옷 랜덤 뽑기 세리머니 ----------
 // 키셋은 constants.ts 의 PENALTY_OUTFITS/STYLES 에서 파생(단일 소스). 옷/연출 추가 시 constants 만 고치면 된다.
 export type PenaltyOutfit = keyof typeof PENALTY_OUTFITS;

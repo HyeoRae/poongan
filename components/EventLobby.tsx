@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEventLobby, useLobbyPresence } from "@/lib/hooks";
+import { useEventLobby, useLobbyMembers } from "@/lib/hooks";
 import {
   closeEventLobby,
   startDraw,
   setLobbyActivity,
+  joinEventLobby,
 } from "@/app/(app)/admin/actions";
 import {
   startPenaltyDraw,
@@ -26,10 +27,11 @@ import type {
   PenaltyStyle,
 } from "@/lib/types";
 
-// 🛎️ 공용 이벤트 대기실 오버레이 — 레이아웃에 항상 마운트되어 있고,
-// 관리자가 열면(status='open') 접속자 전원 화면에 전체화면으로 뜬다.
-// 지금 접속(시청) 중인 사람들의 프로필이 Presence 로 실시간으로 채워지고,
-// 다 모이면 관리자가 대기실 안에서 다음 활동(팀 배정식·퀴즈쇼·벌칙 뽑기)을 골라 시작한다.
+// 🛎️ 공용 이벤트 대기실 오버레이 — 레이아웃에 항상 마운트되어 있다.
+// 관리자가 열면(status='open') 참가자 화면 상단에 "입장" 배너가 뜨고,
+// 입장(join)한 사람만 전체화면 로스터에 모인다(= durable 입장자 명단).
+// 다 모이면 관리자가 대기실 안에서 다음 활동(팀 배정식·퀴즈쇼·벌칙 뽑기)을 골라 시작하고,
+// 그 순간의 입장자 명단이 곧 참가자·벌칙 후보가 된다.
 export default function EventLobby({
   isAdmin,
   me,
@@ -40,32 +42,30 @@ export default function EventLobby({
   initial: EventLobbyState;
 }) {
   const lobby = useEventLobby(initial);
-  const members = useLobbyPresence(me); // 닫혀 있어도 항상 추적 → 열리는 즉시 로스터 채워짐
+  const members = useLobbyMembers(); // 명시적으로 입장한 사람만
   const router = useRouter();
 
   const [pending, setPending] = useState(false);
+  const [justJoined, setJustJoined] = useState(false);
   const [menu, setMenu] = useState<"root" | "penalty">("root");
   const [outfit, setOutfit] = useState<PenaltyOutfit | null>(null);
   const [style, setStyle] = useState<PenaltyStyle>("plinko");
   const [slots, setSlots] = useState(4);
 
-  // 🧠 퀴즈쇼 신호가 오면 전원(관리자 포함) /quiz 로 이동. 이동 후 오버레이는 스스로 숨는다.
+  // 내가 입장했는가 — 관리자는 대기실 열 때 자동 입장. justJoined 로 즉시 반영(에코 대기 X).
+  const joined =
+    isAdmin || justJoined || members.some((m) => m.user_id === me.user_id);
+
+  // 🧠 퀴즈쇼 신호가 오면 입장자만 /quiz 로 이동. 이동 후 오버레이는 스스로 숨는다.
   useEffect(() => {
-    if (lobby.status === "open" && lobby.activity === "quiz") {
+    if (lobby.status === "open" && lobby.activity === "quiz" && joined) {
       router.push("/quiz");
     }
-  }, [lobby.status, lobby.activity, router]);
+  }, [lobby.status, lobby.activity, joined, router]);
 
   if (lobby.status !== "open") return null;
-  // 퀴즈로 전환된 상태 — 위 effect 가 이동을 처리하므로 화면을 덮지 않는다.
+  // 퀴즈로 전환됨 — 입장자는 effect 가 /quiz 로 보내고, 미입장자는 아무것도 안 뜬다.
   if (lobby.activity === "quiz") return null;
-
-  // 사회자 먼저, 그다음 이름순
-  const sorted = [...members].sort((a, b) => {
-    if (a.is_admin !== b.is_admin) return a.is_admin ? -1 : 1;
-    return a.display_name.localeCompare(b.display_name, "ko");
-  });
-  const cols = sorted.length <= 4 ? 2 : sorted.length <= 9 ? 3 : 4;
 
   // 공통 실행 래퍼 — 마지막 액션의 결과가 실패면 알림. 여러 단계는 fn 안에서 조합.
   async function run(fn: () => Promise<{ ok: boolean; message: string } | void>) {
@@ -75,6 +75,42 @@ export default function EventLobby({
     setPending(false);
     if (r && !r.ok && r.message) alert(r.message);
   }
+
+  // 🛎️ 대기실 입장 — 명단에 나를 추가. justJoined 로 즉시 전체화면 전환.
+  function join() {
+    run(async () => {
+      const r = await joinEventLobby();
+      if (r.ok) setJustJoined(true);
+      return r;
+    });
+  }
+
+  // ── 미입장 참가자: 전체화면 강제 대신 상단 "입장" 배너만 ──
+  if (!joined) {
+    return (
+      <div className="fixed inset-x-0 top-0 z-50 p-3">
+        <button
+          onClick={join}
+          disabled={pending}
+          className="mx-auto flex w-full max-w-md items-center justify-center gap-2 rounded-2xl border border-gold/50 bg-gold py-3.5 text-base font-black text-black shadow-lg shadow-black/40 disabled:opacity-60"
+        >
+          🛎️ 대기실 입장{" "}
+          {lobby.title?.trim() ? (
+            <span className="font-bold opacity-80">— {lobby.title}</span>
+          ) : (
+            <span className="font-bold opacity-80">— 이벤트가 곧 시작해요!</span>
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // 사회자 먼저, 그다음 입장순
+  const sorted = [...members].sort((a, b) => {
+    if (a.is_admin !== b.is_admin) return a.is_admin ? -1 : 1;
+    return (a.joined_at ?? "").localeCompare(b.joined_at ?? "");
+  });
+  const cols = sorted.length <= 4 ? 2 : sorted.length <= 9 ? 3 : 4;
 
   // 🎲 팀 배정식 — 배정식 오버레이가 뜨도록 시작 후 대기실을 닫는다.
   // 개시한 관리자 본인은 realtime 에코를 기다리지 않고 refresh 로 즉시 전환(낙관적).
@@ -131,11 +167,11 @@ export default function EventLobby({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-green-400" />
           </span>
-          {sorted.length}명 접속 중
+          {sorted.length}명 입장
         </p>
       </div>
 
-      {/* 접속자 로스터 */}
+      {/* 입장자 로스터 */}
       <div className="flex flex-1 items-center overflow-y-auto px-4 py-4">
         <div
           className="mx-auto grid w-full max-w-md gap-3"

@@ -45,6 +45,14 @@ export async function closeEventLobby(): Promise<ActionResult> {
   return { ok: true, message: "대기실을 닫았습니다." };
 }
 
+// 🛎️ 대기실 입장(누구나) — 열린 대기실 명단에 나를 추가. 이 명단이 곧 퀴즈 참가자.
+export async function joinEventLobby(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("join_event_lobby");
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "" };
+}
+
 // 🛎️ 대기실에서 다음 활동 지정 — 'quiz'면 전원이 /quiz 로 이동한다.
 // (팀 배정식·벌칙은 자체 오버레이라 이 신호가 아니라 대기실 닫기로 전환)
 export async function setLobbyActivity(

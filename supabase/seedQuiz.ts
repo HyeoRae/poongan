@@ -1,6 +1,9 @@
 /**
- * 🧠 스피드 퀴즈쇼 시드 — quizData.ts 의 문제를 quiz_questions 에 올리고(멱등),
- * 참가자(플레이어·봇 제외) 점수 행을 0 으로 준비한다.
+ * 🧠 스피드 퀴즈쇼 시드 — quizData.ts 의 문제를 quiz_questions 에 올린다(멱등).
+ *
+ * 참가자 점수 행은 여기서 미리 만들지 않는다 — quiz_scores 에는 게임 중 실제로
+ * 답을 제출한 사람만 행이 생기고(quiz_reveal), 그들만이 최저점·벌칙 대상이 된다.
+ * (예전엔 전체 프로필을 0 점으로 시드해, 접속도 안 한 사람이 벌칙 후보에 끌려왔음)
  *
  * 사용법:
  *   1) .env.local 에 NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 설정
