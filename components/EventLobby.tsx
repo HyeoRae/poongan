@@ -77,18 +77,28 @@ export default function EventLobby({
   }
 
   // 🎲 팀 배정식 — 배정식 오버레이가 뜨도록 시작 후 대기실을 닫는다.
+  // 개시한 관리자 본인은 realtime 에코를 기다리지 않고 refresh 로 즉시 전환(낙관적).
   function launchDraw() {
     if (!confirm("팀 배정식을 시작할까요? 접속한 모두의 화면에 배정식이 뜹니다.")) return;
     run(async () => {
       const r = await startDraw();
       if (!r.ok) return r;
-      return closeEventLobby();
+      const c = await closeEventLobby();
+      if (c.ok) router.refresh();
+      return c;
     });
   }
 
-  // 🧠 퀴즈쇼 — 신호만 켜면 전원이 /quiz 로 이동(effect). 진행은 퀴즈 페이지 콘솔에서.
+  // 🧠 퀴즈쇼 — 신호를 켜면 전원이 /quiz 로 이동.
+  // refresh 로 레이아웃(대기실 initial)을 다시 받아 activity='quiz' 를 반영하면,
+  // 위 라우팅 effect 가 관리자·참가자 모두를 /quiz 로 이동시킨다.
+  // (같은 (app) 레이아웃 내 push 만으로는 initial 이 갱신되지 않아 오버레이가 남는다)
   function launchQuiz() {
-    run(() => setLobbyActivity("quiz"));
+    run(async () => {
+      const r = await setLobbyActivity("quiz");
+      if (r.ok) router.refresh();
+      return r;
+    });
   }
 
   // 🎭 벌칙 뽑기 — 옷/연출 골라 시작 후 대기실을 닫아 벌칙 오버레이로 전환.
@@ -100,7 +110,9 @@ export default function EventLobby({
           ? await openPenaltyLobby(outfit, slots)
           : await startPenaltyDraw(outfit, style);
       if (!r.ok) return r;
-      return closeEventLobby();
+      const c = await closeEventLobby();
+      if (c.ok) router.refresh();
+      return c;
     });
   }
 
@@ -178,7 +190,13 @@ export default function EventLobby({
               />
             </div>
             <button
-              onClick={() => run(closeEventLobby)}
+              onClick={() =>
+                run(async () => {
+                  const r = await closeEventLobby();
+                  if (r.ok) router.refresh();
+                  return r;
+                })
+              }
               disabled={pending}
               className="w-full rounded-xl border border-border py-2.5 text-sm font-bold text-white/60 disabled:opacity-50"
             >

@@ -132,7 +132,7 @@ export default function AdminPanel({
         />
         <button
           disabled={pending}
-          onClick={() => run(() => openEventLobby(lobbyTitle), { skipRefresh: true })}
+          onClick={() => run(() => openEventLobby(lobbyTitle))}
           className="w-full rounded-xl bg-gold py-3 font-black text-black disabled:opacity-50"
         >
           🛎️ 대기실 열기
