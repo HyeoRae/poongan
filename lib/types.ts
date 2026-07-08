@@ -151,6 +151,7 @@ export type EventLobby = {
   id: number;
   status: EventLobbyStatus;
   title: string | null;
+  activity: "quiz" | null; // 다음 활동 신호 — 'quiz'면 전원 /quiz 로 이동. null=대기.
   updated_at: string;
 };
 

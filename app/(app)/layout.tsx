@@ -37,6 +37,7 @@ const CLOSED_LOBBY: EventLobbyState = {
   id: 1,
   status: "closed",
   title: null,
+  activity: null,
   updated_at: "",
 };
 

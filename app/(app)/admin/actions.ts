@@ -45,6 +45,19 @@ export async function closeEventLobby(): Promise<ActionResult> {
   return { ok: true, message: "대기실을 닫았습니다." };
 }
 
+// 🛎️ 대기실에서 다음 활동 지정 — 'quiz'면 전원이 /quiz 로 이동한다.
+// (팀 배정식·벌칙은 자체 오버레이라 이 신호가 아니라 대기실 닫기로 전환)
+export async function setLobbyActivity(
+  activity: "quiz" | null
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_lobby_activity", {
+    p_activity: activity,
+  });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "" };
+}
+
 // 참가자 비밀번호 초기화 — 임시비번(=아이디)으로 되돌리고 재변경 요구
 export async function resetUserPassword(userId: string): Promise<ActionResult> {
   const guard = await assertAdmin();

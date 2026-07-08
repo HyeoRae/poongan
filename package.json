@@ -11,6 +11,7 @@
     "seed:schedule": "tsx supabase/seedSchedule.ts",
     "seed:games": "tsx supabase/seedMinigames.ts",
     "seed:quiz": "tsx supabase/seedQuiz.ts",
+    "bots": "tsx supabase/lobbyBots.ts",
     "reset": "tsx supabase/reset.ts",
     "test:flows": "tsx supabase/testFlows.ts"
   },
