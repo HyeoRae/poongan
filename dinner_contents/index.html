@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>1일차 저녁 · 숙소 컨텐츠</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141416;
+      --surface-2: #1c1c1f;
+      --border: #2a2a2e;
+      --border-strong: #3a3a40;
+      --text: #f5f5f6;
+      --muted: #8a8a92;
+      --muted-2: #6a6a72;
+      --white: #f5f5f6;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100dvh;
+      display: flex; justify-content: center;
+      -webkit-user-select: none; user-select: none;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(80% 45% at 50% -8%, #1a1a1d 0%, transparent 60%);
+    }
+    .app {
+      position: relative; z-index: 1; width: 100%; max-width: 820px;
+      padding: clamp(30px, 6vh, 64px) clamp(18px, 5vw, 48px) clamp(28px, 5vh, 56px);
+      display: flex; flex-direction: column;
+    }
+
+    /* ── 헤더 ── */
+    .head { transition: opacity .4s ease, transform .4s ease; }
+    .head.hide { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+    .eyebrow { font-size: 13px; letter-spacing: 3px; color: var(--muted-2); text-transform: uppercase; font-weight: 700; }
+    h1 { font-size: clamp(30px, 6.5vw, 50px); margin: 8px 0 10px; letter-spacing: -1.5px; font-weight: 800; }
+    .sub { color: var(--muted); font-size: clamp(14px, 1.7vw, 17px); line-height: 1.6; margin: 0 0 clamp(26px, 4vh, 38px); }
+
+    /* ── 카드 그리드 ── */
+    .grid {
+      display: grid; gap: clamp(10px, 2.5vw, 16px);
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (min-width: 620px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .card {
+      appearance: none; border: none; background: none; padding: 0; margin: 0;
+      aspect-ratio: 3 / 4; cursor: pointer; perspective: 1200px;
+      animation: dealIn .5s cubic-bezier(.2,.8,.2,1) backwards;
+      animation-delay: calc(var(--i) * 55ms);
+    }
+    @keyframes dealIn {
+      from { opacity: 0; transform: translateY(26px) rotate(-5deg) scale(.9); }
+      to   { opacity: 1; transform: none; }
+    }
+    /* hover 리프트는 뽑기 모드의 '아직 안 뽑은' 카드에서만 .flip에 적용
+       (뒤집힌 카드 — 목록 모드/이미 뽑은 .done — 는 rotateY가 풀리므로 제외) */
+    .grid:not(.locked):not(.listmode) .card:not(.done):hover .flip { transform: translateY(-8px); }
+    .grid:not(.locked):not(.listmode) .card:not(.done):active .flip { transform: translateY(-2px) scale(.98); }
+    /* 뒤집힌 카드(목록 모드 or 이미 뽑음)는 래퍼만 들어올림 (내부 flip의 rotateY 유지) */
+    .grid.listmode .card, .card.done { transition: transform .15s ease; }
+    .grid.listmode .card:hover, .card.done:hover { transform: translateY(-6px); }
+    .grid.listmode .card:active, .card.done:active { transform: translateY(-1px) scale(.99); }
+
+    /* 이미 뽑은(열린) 카드 표시 */
+    .card.done .face.front { opacity: .82; }
+    .card.done .face.front::after {
+      content: "✓ 뽑음"; position: absolute; top: 8px; right: 9px;
+      font-size: 9px; font-weight: 800; letter-spacing: .5px; color: #0a0a0b;
+      background: var(--accent); border-radius: 999px; padding: 2px 7px; line-height: 1.3;
+    }
+
+    .flip {
+      position: relative; width: 100%; height: 100%;
+      transform-style: preserve-3d;
+      transition: transform .7s cubic-bezier(.2,.7,.2,1);
+    }
+    .flip.flipped { transform: rotateY(180deg); }
+
+    .face {
+      position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    /* 뒷면 (기본으로 보이는 면) */
+    .face.back {
+      background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 10px, transparent 10px 20px),
+        linear-gradient(160deg, var(--surface-2), var(--surface));
+      border: 1px solid var(--border-strong);
+      gap: 10px;
+    }
+    .face.back .qmark {
+      font-size: clamp(40px, 12vw, 60px); font-weight: 900; color: var(--muted-2);
+      text-shadow: 0 2px 20px rgba(0,0,0,.5); line-height: 1;
+    }
+    .face.back .back-label {
+      font-size: 9.5px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted-2); font-weight: 700;
+    }
+    .face.back::after {
+      content: ""; position: absolute; inset: 6px; border: 1px solid var(--border); border-radius: 13px; pointer-events: none;
+    }
+
+    /* 앞면 (뒤집으면 보이는 면) */
+    .face.front {
+      transform: rotateY(180deg);
+      background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 14%, var(--surface)), var(--surface));
+      border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+      padding: 9% 8%; gap: 5px; text-align: center;
+    }
+    .face.front .fbar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--accent); }
+    .face.front .fbadge { font-size: 30px; line-height: 1; margin-bottom: 2px; }
+    .face.front .ftag { font-size: 10px; font-weight: 800; letter-spacing: .5px; color: var(--accent); text-transform: uppercase; }
+    .face.front .fname { font-size: 15px; font-weight: 800; letter-spacing: -.4px; line-height: 1.2; word-break: keep-all; }
+    .face.front .fdesc {
+      font-size: 11px; color: var(--muted); line-height: 1.35; word-break: keep-all; margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    }
+
+    /* 선택되지 않은 카드 사라짐 */
+    .card.gone {
+      transition: opacity .45s ease, transform .5s cubic-bezier(.4,0,.6,1);
+      opacity: 0; transform: scale(.82) translateY(14px); pointer-events: none;
+    }
+
+    /* 중앙으로 온 카드: 긴장 연출 */
+    .card.chosen { z-index: 60; }
+    .card.chosen .flip { box-shadow: 0 30px 80px -30px rgba(0,0,0,.9); }
+    .card.suspense .flip { animation: glow 1s ease-in-out infinite; }
+    .card.suspense .qmark { animation: qpulse 1s ease-in-out infinite; }
+    @keyframes glow {
+      0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent), 0 30px 80px -30px rgba(0,0,0,.9); }
+      50%     { box-shadow: 0 0 46px 6px color-mix(in srgb, var(--accent) 45%, transparent), 0 30px 80px -30px rgba(0,0,0,.9); }
+    }
+    @keyframes qpulse { 0%,100% { transform: scale(1); opacity: .8; } 50% { transform: scale(1.18); opacity: 1; } }
+
+    /* ── 배경 딤 ── */
+    .backdrop {
+      position: fixed; inset: 0; z-index: 40; opacity: 0; pointer-events: none;
+      background: radial-gradient(circle at 50% 45%, rgba(18,18,20,.35), rgba(0,0,0,.9));
+      -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+      transition: opacity .5s ease;
+    }
+    .backdrop.show { opacity: 1; }
+
+    /* ── 하단 액션 (공개 후) ── */
+    .stage-actions {
+      position: fixed; left: 0; right: 0; bottom: clamp(22px, 6vh, 54px); z-index: 70;
+      display: flex; gap: 12px; justify-content: center; padding: 0 20px;
+      opacity: 0; transform: translateY(14px); pointer-events: none;
+      transition: opacity .5s ease, transform .5s ease;
+    }
+    .stage-actions.show { opacity: 1; transform: none; pointer-events: auto; }
+    .act {
+      border: none; border-radius: 14px; padding: 15px 22px; font: inherit; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: filter .16s ease, transform .1s ease;
+    }
+    .act:active { transform: scale(.97); }
+    .act.primary { background: var(--accent, var(--white)); color: #0a0a0b; }
+    .act.primary:hover { filter: brightness(.93); }
+    .act.ghost { background: rgba(255,255,255,.05); color: var(--muted); border: 1px solid var(--border-strong); }
+    .act.ghost:hover { color: var(--text); }
+
+    /* ── 하단 안내 / 토글 ── */
+    .foot { margin-top: clamp(26px, 4vh, 40px); text-align: center; color: var(--muted-2); font-size: 12.5px; line-height: 1.7; transition: opacity .4s ease; }
+    .foot.hide { opacity: 0; pointer-events: none; }
+    .toggle {
+      margin-top: 12px; background: transparent; border: 1px solid var(--border); border-radius: 12px;
+      color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 9px 16px; cursor: pointer;
+      transition: color .18s ease, border-color .18s ease;
+    }
+    .toggle:hover { color: var(--text); border-color: var(--border-strong); }
+    .foot-btns { margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .foot-btns .toggle { margin-top: 0; }
+    .toggle.danger { color: #ff6b5e; border-color: color-mix(in srgb, #ff6b5e 32%, var(--border)); }
+    .toggle.danger:hover { color: #ff8f85; border-color: #ff6b5e; }
+
+    /* 목록 모드: 전부 앞면 + 데스크톱에서 더 촘촘 */
+    .grid.listmode .card { cursor: pointer; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .card { animation: none; }
+      .flip, .card.gone, .backdrop, .stage-actions { transition-duration: .001ms; }
+      .card.suspense .flip, .card.suspense .qmark { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="head" id="head">
+      <div class="eyebrow">Dinner Contents</div>
+      <h1>저녁 컨텐츠</h1>
+      <p class="sub" id="sub">통영·거제 여름여행</p>
+    </header>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="foot" id="foot">
+      규칙 = 방법·규칙 안내 / 앱 = 화면 조작 게임 · 총 8종
+      <div class="foot-btns">
+        <button class="toggle" id="toggle">📋 목록으로 보기</button>
+        <button class="toggle danger" id="resetAllBtn" hidden>↺ 완전 초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <div class="stage-actions" id="actions"></div>
+
+  <script>
+    // ── 게임 8종 (기획안 = Dinner_contents.md) ─────────────────
+    const GAMES = [
+      { num: 1, emoji: "🌭", name: "소시지", desc: "손 대지 않고 허리 반동으로 매달린 소시지 먼저 먹기", href: "소시지/소시지반동먹기.html", accent: "#ff9b6b", app: false },
+      { num: 2, emoji: "🥤", name: "컵", desc: "선을 넘지 않고 몸을 이어 컵을 최대한 멀리 세워두기", href: "컵/컵멀리두기.html", accent: "#6bd3ff", app: false },
+      { num: 3, emoji: "🧻", name: "휴지", desc: "정해진 선에서 휴지 한 칸을 가장 멀리 날리기", href: "휴지/휴지날리기.html", accent: "#b8c2d9", app: false },
+      { num: 4, emoji: "🚰", name: "물병", desc: "안대 쓰고 걸어가 네모칸 중심에 가깝게 물병 놓기", href: "물병/눈가리고물병놓기.html", accent: "#7aa2ff", app: false },
+      { num: 5, emoji: "🧠", name: "일심동체", desc: "제시어에 맞춰 팀 전원이 동시에 같은 동작 취하기", href: "일심동체/ilsim.html", accent: "#a0e577", app: true },
+      { num: 6, emoji: "✋", name: "촉감", desc: "가림막 뒤 손만 넣어 촉감으로 신체 부위 맞히기", href: "촉감/촉감으로맞히기.html", accent: "#ff7ab0", app: false },
+      { num: 7, emoji: "🔣", name: "줄줄이", desc: "화면 기호를 순서대로 3초 안에 이어 말하기", href: "줄줄이/줄줄이말해요.html", accent: "#ffd166", app: true },
+      { num: 8, emoji: "🧽", name: "스펀지", desc: "뽑은 도구·그릇으로 안대 쓰고 1분간 스펀지 담기", href: "스펀지/스펀지담기.html", accent: "#c79bff", app: true },
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const grid = $("grid"), head = $("head"), foot = $("foot");
+    const backdrop = $("backdrop"), actions = $("actions"), toggle = $("toggle");
+
+    const SUB_DRAW = "통영·거제 여름여행 — 팀 대항 미니게임 8종. 카드를 하나 골라 뒤집어 보세요.";
+    const SUB_LIST = "게임 목록입니다. 원하는 게임을 눌러 바로 이동하세요.";
+
+    let locked = false;      // 뽑기 세리머니 진행 중 잠금
+    let mode = "draw";       // "draw" | "list"
+    const order = GAMES.slice();   // 위치 고정 (셔플 안 함)
+
+    // ── 뽑은(열린) 카드 영속 저장 ──────────────────────────────
+    // 게임에 다녀와 목록으로 돌아와도(=페이지 재로드) 뽑았던 카드는 열린 채로 유지.
+    // "완전 초기화"를 눌러야만 전부 뒷면으로 되돌아간다.
+    const STORE_KEY = "dinner_drawn_v1";
+    function loadDrawn() { try { return new Set(JSON.parse(localStorage.getItem(STORE_KEY) || "[]")); } catch (e) { return new Set(); } }
+    function saveDrawn() { try { localStorage.setItem(STORE_KEY, JSON.stringify([...drawn])); } catch (e) {} }
+    const drawn = loadDrawn();
+
+    order.forEach((g, i) => {
+      const card = document.createElement("button");
+      card.className = "card";
+      card.style.setProperty("--i", i);
+      card.style.setProperty("--accent", g.accent);
+      card.setAttribute("aria-label", g.name + " 카드");
+      card.innerHTML =
+        `<div class="flip">
+           <div class="face back">
+             <span class="qmark">?</span>
+             <span class="back-label">Dinner</span>
+           </div>
+           <div class="face front">
+             <div class="fbar"></div>
+             <div class="fbadge">${g.emoji}</div>
+             <div class="ftag">GAME ${g.num} · ${g.app ? "앱" : "규칙"}</div>
+             <div class="fname">${g.name}</div>
+             <div class="fdesc">${g.desc}</div>
+           </div>
+         </div>`;
+      // 이미 뽑은 카드는 처음부터 열린(앞면) 상태
+      if (drawn.has(g.num)) {
+        card.classList.add("done");
+        card.querySelector(".flip").classList.add("flipped");
+      }
+      card.addEventListener("click", () => onCard(card, g));
+      grid.appendChild(card);
+    });
+    const cards = Array.from(grid.querySelectorAll(".card"));
+
+    $("resetAllBtn").onclick = resetAll;
+    updateResetBtn();
+
+    function onCard(card, game) {
+      if (mode === "list") { go(game); return; }        // 목록 모드: 바로 이동
+      if (drawn.has(game.num)) { go(game); return; }    // 이미 열린 카드: 세리머니 없이 바로 이동
+      if (locked) return;
+      choose(card, game);
+    }
+
+    // ── 뽑기 세리머니 ──────────────────────────────────────────
+    function choose(card, game) {
+      locked = true;
+      grid.classList.add("locked");
+      head.classList.add("hide");
+      foot.classList.add("hide");
+      backdrop.classList.add("show");
+
+      // 2) 나머지 카드 사라짐
+      cards.forEach((c) => { if (c !== card) c.classList.add("gone"); });
+
+      // 3) 고른 카드를 현재 위치에 고정(FLIP) 후 중앙으로 확대
+      const r = card.getBoundingClientRect();
+      card.classList.add("chosen");
+      Object.assign(card.style, {
+        position: "fixed", margin: "0",
+        left: r.left + "px", top: r.top + "px",
+        width: r.width + "px", height: r.height + "px",
+        transition: "none",
+      });
+      // .app(z-index:1)의 스태킹 컨텍스트를 벗어나 딤 배경(z-index:40) 위로 올린다.
+      // fixed 좌표는 뷰포트 기준이라 body로 옮겨도 화면상 위치는 그대로 유지됨.
+      document.body.appendChild(card);
+
+      const targetW = Math.min(320, window.innerWidth * 0.82);
+      let scale = targetW / r.width;
+      const maxH = window.innerHeight * 0.72;
+      if (r.height * scale > maxH) scale = maxH / r.height;
+      const dx = window.innerWidth / 2 - (r.left + r.width / 2);
+      const dy = window.innerHeight / 2 - (r.top + r.height / 2);
+
+      requestAnimationFrame(() => {
+        card.style.transition = "transform .65s cubic-bezier(.2,.8,.2,1)";
+        card.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+      });
+
+      const flip = card.querySelector(".flip");
+      const T_MOVE = 700, T_SUSPENSE = 950, T_FLIP = 750;
+
+      // 4) 살짝 긴장 유지 → 뒤집으며 공개 (+ 뽑은 것으로 기록)
+      setTimeout(() => card.classList.add("suspense"), T_MOVE);
+      setTimeout(() => {
+        card.classList.remove("suspense");
+        flip.classList.add("flipped");
+        card.classList.add("done");
+        drawn.add(game.num); saveDrawn();
+        if (navigator.vibrate) navigator.vibrate([18, 60, 24]);
+      }, T_MOVE + T_SUSPENSE);
+      setTimeout(() => showActions(game), T_MOVE + T_SUSPENSE + T_FLIP);
+    }
+
+    function showActions(game) {
+      actions.style.setProperty("--accent", game.accent);
+      actions.innerHTML =
+        `<button class="act primary" id="goBtn">${game.app ? "게임 시작 →" : "규칙 보기 →"}</button>
+         <button class="act ghost" id="listBtn">목록으로 ↩</button>`;
+      actions.classList.add("show");
+      $("goBtn").onclick = () => go(game);
+      $("listBtn").onclick = returnToList;   // 뽑은 카드는 열린 채 목록으로 복귀
+    }
+
+    // 게임/규칙으로 이동 (이동하는 게임도 '뽑음'으로 기록 → 돌아오면 열린 채)
+    function go(game) { drawn.add(game.num); saveDrawn(); location.href = encodeURI(game.href); }
+
+    // ── 보드 재배치: 뽑은 카드는 열린 채, 안 뽑은 카드는 뒷면 ──
+    function renderBoard(animate) {
+      cards.forEach((c, i) => {
+        c.classList.remove("gone", "chosen", "suspense");
+        c.removeAttribute("style");                       // 중앙 고정 인라인 스타일 제거
+        c.style.setProperty("--i", i);
+        c.style.setProperty("--accent", order[i].accent);
+        const flip = c.querySelector(".flip");
+        if (drawn.has(order[i].num)) { c.classList.add("done"); flip.classList.add("flipped"); }
+        else { c.classList.remove("done"); flip.classList.remove("flipped"); }
+        grid.appendChild(c);                              // body로 뺐던 카드까지 원래 순서로 복귀
+        if (animate) { c.style.animation = "none"; void c.offsetWidth; c.style.animation = ""; }
+      });
+    }
+
+    function resetStageChrome() {
+      actions.classList.remove("show");
+      backdrop.classList.remove("show");
+      head.classList.remove("hide");
+      foot.classList.remove("hide");
+      grid.classList.remove("listmode");
+      $("sub").textContent = SUB_DRAW;
+      toggle.textContent = "📋 목록으로 보기";
+      locked = false;
+      mode = "draw";
+    }
+
+    // 목록으로 복귀 (뽑은 상태는 그대로 보존)
+    function returnToList() {
+      resetStageChrome();
+      renderBoard(true);
+      updateResetBtn();
+    }
+
+    // 완전 초기화 (저장 비우고 전부 뒷면으로)
+    function resetAll() {
+      drawn.clear(); saveDrawn();
+      resetStageChrome();
+      renderBoard(true);
+      updateResetBtn();
+    }
+
+    // 뽑은 카드가 하나라도 있을 때만 '완전 초기화' 노출
+    function updateResetBtn() { $("resetAllBtn").hidden = drawn.size === 0; }
+
+    // ── 목록 모드 토글 (진행자가 직접 고르고 싶을 때) ───────────
+    toggle.onclick = () => {
+      if (locked) return;
+      if (mode === "draw") {
+        mode = "list";
+        grid.classList.add("listmode");
+        cards.forEach((c) => c.querySelector(".flip").classList.add("flipped"));
+        $("sub").textContent = SUB_LIST;
+        toggle.textContent = "🎴 뽑기로 보기";
+      } else {
+        mode = "draw";
+        grid.classList.remove("listmode");
+        // 목록 해제 시: 뽑은 카드만 열린 채로 유지
+        cards.forEach((c, i) => {
+          const flip = c.querySelector(".flip");
+          if (drawn.has(order[i].num)) flip.classList.add("flipped");
+          else flip.classList.remove("flipped");
+        });
+        $("sub").textContent = SUB_DRAW;
+        toggle.textContent = "📋 목록으로 보기";
+      }
+    };
+  </script>
+</body>
+</html>

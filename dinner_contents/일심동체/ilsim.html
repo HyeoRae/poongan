@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>일심동체</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141416;
+      --surface-2: #1c1c1f;
+      --border: #2a2a2e;
+      --border-strong: #3a3a40;
+      --text: #f5f5f6;
+      --muted: #8a8a92;
+      --muted-2: #6a6a72;
+      --white: #f5f5f6;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+    /* 은은한 상단 그라디언트 (무채색) */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background: radial-gradient(80% 50% at 50% -10%, #1a1a1d 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 860px;
+      min-height: 100dvh;
+      padding: clamp(20px, 4vh, 48px) clamp(20px, 5vw, 56px);
+      display: flex;
+      flex-direction: column;
+    }
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; animation: fade .3s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .eyebrow { font-size: 13px; letter-spacing: 3px; color: var(--muted-2); text-transform: uppercase; font-weight: 600; }
+    h1 { font-size: clamp(32px, 6vw, 52px); margin: 6px 0 10px; letter-spacing: -1.5px; font-weight: 800; }
+    .sub { color: var(--muted); font-size: clamp(14px, 1.6vw, 17px); line-height: 1.6; margin: 0 0 clamp(24px, 4vh, 40px); }
+
+    /* ── 목록 선택 ── */
+    .lists { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 640px) { .lists { grid-template-columns: 1fr 1fr; gap: 14px; } }
+    .list-card {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      cursor: pointer; font: inherit; color: inherit; text-align: left; width: 100%;
+      transition: transform .12s ease, border-color .18s ease, background .18s ease;
+    }
+    .list-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .list-card:active { transform: scale(0.985); }
+    .list-card .badge {
+      width: 48px; height: 48px; flex: 0 0 48px; border-radius: 12px;
+      display: grid; place-items: center; font-size: 20px; font-weight: 800;
+      background: var(--surface-2); border: 1px solid var(--border-strong); color: var(--text);
+    }
+    .list-card .meta .name { font-size: 18px; font-weight: 700; }
+    .list-card .meta .cnt { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    /* ── 공통 버튼 ── */
+    .btn {
+      border: none; border-radius: 16px; padding: clamp(16px, 2.2vh, 20px);
+      font-size: clamp(16px, 2vw, 19px); font-weight: 700; cursor: pointer; width: 100%;
+      background: var(--white); color: #0a0a0b; font-family: inherit;
+      transition: transform .12s ease, opacity .18s ease, filter .18s ease;
+    }
+    .btn:hover { filter: brightness(0.92); }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { opacity: .4; cursor: default; }
+    .btn.ghost {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-size: 15px; font-weight: 600;
+    }
+    .btn.ghost:hover { border-color: var(--border-strong); color: var(--text); filter: none; }
+    .spacer { flex: 1; }
+    .footer-actions { display: grid; gap: 10px; margin-top: clamp(20px, 4vh, 32px); }
+
+    /* ── 대기 화면 ── */
+    .center-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .ready .picked-badge {
+      width: clamp(88px, 12vh, 120px); height: clamp(88px, 12vh, 120px); border-radius: 28px;
+      display: grid; place-items: center; font-size: clamp(40px, 6vh, 56px); font-weight: 800;
+      background: var(--surface); border: 1px solid var(--border-strong); margin-bottom: 20px;
+    }
+    .ready .picked-name { font-size: clamp(26px, 4vw, 36px); font-weight: 800; letter-spacing: -1px; }
+    .ready .picked-cnt { color: var(--muted); margin-top: 6px; font-size: 15px; }
+
+    /* ── 게임 화면 ── */
+    .topbar { display: flex; justify-content: center; gap: clamp(40px, 12vw, 96px); margin-bottom: 12px; }
+    .stat { text-align: center; }
+    .stat .label { font-size: 11px; color: var(--muted-2); letter-spacing: 2px; text-transform: uppercase; }
+    .stat .value {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 800; font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px; line-height: 1.1;
+    }
+    .progress { height: 4px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin: 6px 0 clamp(16px, 3vh, 28px); }
+    .progress .bar { height: 100%; background: var(--white); width: 0%; transition: width .35s ease; }
+
+    .stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: clamp(20px, 4vh, 40px); }
+    .word-index { color: var(--muted-2); font-size: clamp(14px, 1.8vw, 18px); letter-spacing: 1px; }
+    .word {
+      font-size: clamp(48px, 11vw, 132px); font-weight: 900; line-height: 1.08;
+      letter-spacing: -2px; padding: 0 8px; word-break: keep-all;
+    }
+    /* 카운트다운 큐: 제시어 아래에 별도로 표시 — 제시어를 가리지 않음 */
+    .cue { height: clamp(56px, 9vh, 88px); display: flex; align-items: center; justify-content: center; }
+    .cue .num {
+      font-size: clamp(48px, 8vh, 80px); font-weight: 900; color: var(--muted);
+      font-variant-numeric: tabular-nums; line-height: 1;
+    }
+    .cue .num.tick { animation: tick .9s ease; }
+    .cue .num.go { color: var(--white); font-size: clamp(32px, 5vh, 52px); letter-spacing: 2px; animation: tick .5s ease; }
+    @keyframes tick { 0% { transform: scale(.5); opacity: .2; } 45% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+
+    .answer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 2vw, 18px); margin-top: clamp(8px, 2vh, 16px); }
+    .ans {
+      border: 1px solid var(--border-strong); border-radius: 18px;
+      padding: clamp(20px, 3.5vh, 30px) 12px; font-size: clamp(18px, 2.4vw, 24px); font-weight: 800;
+      cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: transform .1s ease, opacity .18s ease, background .18s ease, border-color .18s ease, filter .18s ease;
+    }
+    .ans .ico { font-size: 1.1em; }
+    .ans-fail { background: var(--surface); color: var(--muted); }
+    .ans-fail:hover { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+    .ans-ok { background: var(--white); color: #0a0a0b; border-color: var(--white); }
+    .ans-ok:hover { filter: brightness(0.92); }
+    .ans:active { transform: scale(0.98); }
+    .ans:disabled { opacity: .3; cursor: default; }
+
+    /* ── 결과 ── */
+    .result .headline { font-size: clamp(28px, 5vw, 44px); font-weight: 800; letter-spacing: -1px; margin: 6px 0 clamp(24px, 4vh, 36px); }
+    .result-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 460px; }
+    .result-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: clamp(20px, 3vh, 28px) 16px; }
+    .result-card .label { font-size: 13px; color: var(--muted); letter-spacing: 1px; }
+    .result-card .big { font-size: clamp(36px, 7vw, 56px); font-weight: 900; font-variant-numeric: tabular-nums; margin-top: 6px; letter-spacing: -1px; }
+    .result .detail { color: var(--muted); font-size: 15px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- 1) 목록 선택 -->
+    <section id="screen-select" class="screen active">
+      <div class="eyebrow">Dinner Game</div>
+      <h1>일심동체</h1>
+      <p class="sub">진행할 제시어 목록을 고르세요. 선택한 목록 전체를 한 바퀴 돌면 종료됩니다.</p>
+      <div class="lists" id="listContainer"></div>
+      <div class="spacer"></div>
+    </section>
+
+    <!-- 2) 대기 -->
+    <section id="screen-ready" class="screen">
+      <div class="center-col ready">
+        <div class="picked-badge" id="readyBadge">A</div>
+        <div class="picked-name" id="readyName"></div>
+        <div class="picked-cnt" id="readyCnt"></div>
+        <p class="sub" style="margin-top:24px; max-width:360px;">준비되면 시작을 누르세요. 시작과 동시에 전체 타이머가 돌아갑니다.</p>
+      </div>
+      <div class="footer-actions">
+        <button class="btn" id="startBtn">시작</button>
+        <button class="btn ghost" id="backBtn">목록 다시 선택</button>
+      </div>
+    </section>
+
+    <!-- 3) 게임 -->
+    <section id="screen-play" class="screen">
+      <div class="topbar">
+        <div class="stat"><div class="label">Time</div><div class="value" id="timer">00:00</div></div>
+        <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+      </div>
+      <div class="progress"><div class="bar" id="progressBar"></div></div>
+
+      <div class="stage">
+        <div class="word-index" id="wordIndex"></div>
+        <div class="word" id="word"></div>
+        <div class="cue"><div class="num" id="cueNum"></div></div>
+      </div>
+
+      <div class="answer-actions">
+        <button class="ans ans-fail" id="failBtn" disabled><span class="ico">✕</span>실패</button>
+        <button class="ans ans-ok" id="okBtn" disabled><span class="ico">✓</span>성공</button>
+      </div>
+      <button class="btn ghost" id="quitBtn" style="margin-top:12px;">그만두기</button>
+    </section>
+
+    <!-- 4) 결과 -->
+    <section id="screen-result" class="screen">
+      <div class="center-col result">
+        <div class="eyebrow" id="resultEyebrow">Result</div>
+        <div class="headline" id="resultHeadline"></div>
+        <div class="result-cards">
+          <div class="result-card"><div class="label">SCORE</div><div class="big" id="finalScore">0</div></div>
+          <div class="result-card"><div class="label">TIME</div><div class="big" id="finalTime">00:00</div></div>
+        </div>
+        <div class="detail" id="resultDetail"></div>
+      </div>
+      <div class="footer-actions">
+        <button class="btn" id="againBtn">같은 목록 다시</button>
+        <button class="btn ghost" id="homeBtn">목록 선택으로</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // ── 제시어 목록 (자유롭게 수정) ─────────────────────────────
+    const WORD_LISTS = {
+      A: { name: "영화·드라마", words: ["기생충","오징어 게임","타이타닉","어벤져스","겨울왕국","슬램덩크","아이언맨","해리포터","라이온 킹","범죄도시","인터스텔라","도깨비"] },
+      B: { name: "음식",       words: ["김치찌개","치킨","떡볶이","삼겹살","비빔밥","마라탕","짜장면","초밥","곱창","붕어빵","냉면","족발"] },
+      C: { name: "동물·사물",  words: ["코끼리","펭귄","선풍기","우산","자전거","기린","칫솔","고양이","냉장고","해바라기","공룡","드론"] },
+      D: { name: "여행·통영거제", words: ["케이블카","동피랑 벽화","굴구이","한산도","외도 보타니아","멍게비빔밥","루지","포로수용소","충무김밥","해수욕장","유람선","다찌"] },
+    };
+
+    const READY_COUNT = 3;   // 제시어당 카운트다운 (3 2 1)
+
+    // ── 상태 ────────────────────────────────────────────────────
+    let currentKey = null, words = [], idx = 0, score = 0;
+    let startMs = 0, timerInt = null, countInt = null, answered = false;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = { select: $("screen-select"), ready: $("screen-ready"), play: $("screen-play"), result: $("screen-result") };
+    function show(name) {
+      Object.values(screens).forEach(s => s.classList.remove("active"));
+      screens[name].classList.add("active");
+    }
+    function fmt(ms) {
+      const t = Math.floor(ms / 1000);
+      return `${String(Math.floor(t / 60)).padStart(2,"0")}:${String(t % 60).padStart(2,"0")}`;
+    }
+    function shuffle(arr) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+      return a;
+    }
+
+    // ── 1) 목록 선택 UI ─────────────────────────────────────────
+    const container = $("listContainer");
+    Object.entries(WORD_LISTS).forEach(([key, list]) => {
+      const btn = document.createElement("button");
+      btn.className = "list-card";
+      btn.innerHTML = `<div class="badge">${key}</div>
+        <div class="meta"><div class="name">${list.name}</div><div class="cnt">${list.words.length}개 제시어</div></div>`;
+      btn.onclick = () => pickList(key);
+      container.appendChild(btn);
+    });
+
+    // ── 2) 대기 ─────────────────────────────────────────────────
+    function pickList(key) {
+      currentKey = key;
+      const list = WORD_LISTS[key];
+      $("readyBadge").textContent = key;
+      $("readyName").textContent = list.name;
+      $("readyCnt").textContent = `${list.words.length}개 제시어`;
+      show("ready");
+    }
+    $("backBtn").onclick = () => show("select");
+
+    // ── 3) 시작 ─────────────────────────────────────────────────
+    $("startBtn").onclick = startGame;
+    $("againBtn").onclick = startGame;
+    $("homeBtn").onclick = () => show("select");
+    $("quitBtn").onclick = () => finish(true);
+
+    function startGame() {
+      words = shuffle(WORD_LISTS[currentKey].words);
+      idx = 0; score = 0;
+      $("score").textContent = "0";
+      show("play");
+      // 메인 타이머: 목록 전체가 끝날 때까지 한 번만 돈다
+      startMs = Date.now();
+      $("timer").textContent = "00:00";
+      clearInterval(timerInt);
+      timerInt = setInterval(() => { $("timer").textContent = fmt(Date.now() - startMs); }, 200);
+      showWord();
+    }
+
+    // ── 4) 제시어 등장 + (가리지 않는) 3·2·1 카운트다운 ─────────
+    function showWord() {
+      answered = false;
+      $("word").textContent = words[idx];                       // 제시어는 즉시 표시되고 계속 보인다
+      $("wordIndex").textContent = `${idx + 1} / ${words.length}`;
+      $("progressBar").style.width = `${(idx / words.length) * 100}%`;
+
+      $("okBtn").disabled = true;
+      $("failBtn").disabled = true;
+
+      const cue = $("cueNum");
+      let n = READY_COUNT;
+      const render = (val, cls) => { cue.className = "num"; void cue.offsetWidth; cue.textContent = val; cue.classList.add(cls); };
+      render(n, "tick");
+
+      clearInterval(countInt);
+      countInt = setInterval(() => {
+        n--;
+        if (n > 0) {
+          render(n, "tick");
+        } else {
+          render("시작!", "go");
+          clearInterval(countInt);
+          setTimeout(() => { $("okBtn").disabled = false; $("failBtn").disabled = false; }, 450);
+          setTimeout(() => { if (!answered) cue.textContent = ""; }, 1100);
+        }
+      }, 1000);
+    }
+
+    // ── 5) 성공 / 실패 ──────────────────────────────────────────
+    $("okBtn").onclick = () => answer(true);
+    $("failBtn").onclick = () => answer(false);
+    function answer(success) {
+      if (answered) return;
+      answered = true;
+      if (success) { score++; $("score").textContent = score; }
+      $("okBtn").disabled = true; $("failBtn").disabled = true;
+      $("cueNum").textContent = "";
+      idx++;
+      if (idx >= words.length) { $("progressBar").style.width = "100%"; setTimeout(() => finish(false), 300); }
+      else { setTimeout(showWord, 150); }
+    }
+
+    // ── 6) 결과 ─────────────────────────────────────────────────
+    function finish(quit) {
+      clearInterval(timerInt); clearInterval(countInt);
+      const elapsed = Date.now() - startMs, total = words.length;
+      $("finalScore").textContent = score;
+      $("finalTime").textContent = fmt(elapsed);
+      const rate = total ? Math.round((score / total) * 100) : 0;
+      let head = "수고했어요";
+      if (quit) head = "게임 중단";
+      else if (rate === 100) head = "완벽한 일심동체";
+      else if (rate >= 70) head = "환상의 호흡";
+      else if (rate >= 40) head = "꽤 잘 맞았어요";
+      else head = "다음엔 더 잘할 수 있어요";
+      $("resultHeadline").textContent = head;
+      $("resultDetail").textContent = `${WORD_LISTS[currentKey].name} · ${score} / ${total} 성공 (${rate}%)`;
+      show("result");
+    }
+
+    // 키보드 진행 (PC 편의): Space/→ 성공, ←/Backspace 실패, Enter 시작·재시작
+    document.addEventListener("keydown", (e) => {
+      if (screens.play.classList.contains("active")) {
+        if ((e.code === "Space" || e.code === "ArrowRight") && !$("okBtn").disabled) { e.preventDefault(); answer(true); }
+        else if ((e.code === "ArrowLeft" || e.code === "Backspace") && !$("failBtn").disabled) { e.preventDefault(); answer(false); }
+      } else if (screens.ready.classList.contains("active") && e.code === "Enter") { startGame(); }
+      else if (screens.result.classList.contains("active") && e.code === "Enter") { startGame(); }
+    });
+  </script>
+</body>
+</html>

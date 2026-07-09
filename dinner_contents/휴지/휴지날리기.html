@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>휴지 한 칸 멀리 날리기</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141416;
+      --surface-2: #1c1c1f;
+      --border: #2a2a2e;
+      --border-strong: #3a3a40;
+      --text: #f5f5f6;
+      --muted: #8a8a92;
+      --muted-2: #6a6a72;
+      --white: #f5f5f6;
+      --warn: #ff6b5e;
+      --accent: #b8c2d9;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100dvh;
+      display: flex; justify-content: center; align-items: stretch;
+      -webkit-user-select: none; user-select: none;
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none;
+      background: radial-gradient(80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 14%, #1a1a1d) 0%, transparent 60%);
+    }
+    .app {
+      position: relative; width: 100%; max-width: 720px; min-height: 100dvh;
+      padding: clamp(28px, 5vh, 56px) clamp(20px, 5vw, 48px) clamp(24px, 4vh, 40px);
+      display: flex; flex-direction: column;
+      animation: fade .35s ease;
+    }
+    @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .eyebrow { font-size: 13px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+    h1 { font-size: clamp(30px, 6.4vw, 52px); margin: 8px 0 12px; letter-spacing: -1.5px; font-weight: 800; display: flex; align-items: center; gap: 14px; }
+    h1 .emoji { font-size: .9em; }
+    .sub { color: var(--muted); font-size: clamp(15px, 1.8vw, 18px); line-height: 1.6; margin: 0 0 clamp(24px, 4vh, 36px); }
+
+    .section { margin-bottom: clamp(20px, 3vh, 28px); }
+    .section-label {
+      font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+      color: var(--muted-2); margin: 0 0 12px 2px;
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+      padding: 9px 16px; font-size: 14px; font-weight: 600; color: var(--text);
+    }
+
+    .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .steps li {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 15px 16px; font-size: 15px; line-height: 1.55; color: var(--text);
+      display: flex; gap: 14px; align-items: baseline;
+    }
+    .steps li .n {
+      flex: 0 0 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+      background: color-mix(in srgb, var(--accent) 20%, var(--surface-2));
+      color: var(--accent); font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums;
+      align-self: flex-start; margin-top: 1px;
+    }
+    .steps li b { color: var(--white); font-weight: 700; }
+
+    .rules { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .rules li {
+      background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
+      border-radius: 14px; padding: 13px 16px; font-size: 14.5px; line-height: 1.5;
+      color: var(--text); display: flex; gap: 12px; align-items: baseline;
+    }
+    .rules li::before { content: "!"; color: var(--warn); font-weight: 900; flex: 0 0 auto; }
+    .rules li b { color: var(--white); }
+
+    .spacer { flex: 1; min-height: 20px; }
+    .back {
+      display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+      background: transparent; border: 1px solid var(--border); border-radius: 14px;
+      color: var(--muted); text-decoration: none; font-size: 15px; font-weight: 600;
+      padding: 13px 20px; transition: color .18s ease, border-color .18s ease;
+    }
+    .back:hover { color: var(--text); border-color: var(--border-strong); }
+
+    .fs-btn {
+      position: fixed; top: 14px; right: 14px; z-index: 50;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      font-size: 19px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+      transition: color .18s ease, border-color .18s ease, transform .12s ease;
+    }
+    .fs-btn:hover { color: var(--text); border-color: var(--border-strong); }
+    .fs-btn:active { transform: scale(0.94); }
+  </style>
+</head>
+<body>
+  <button id="fsBtn" class="fs-btn" title="전체화면" aria-label="전체화면">⛶</button>
+  <div class="app">
+    <div class="eyebrow">Dinner Game 3</div>
+    <h1><span class="emoji">🧻</span> 휴지 한 칸 멀리 날리기</h1>
+    <p class="sub">정해진 선에서 휴지 한 칸을 날려 <b>가장 멀리</b> 보낸 사람이 승리.</p>
+
+    <div class="section">
+      <p class="section-label">준비물</p>
+      <div class="chips">
+        <span class="chip">두루마리 휴지 (1인 1칸씩 배분)</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-label">방법</p>
+      <ol class="steps">
+        <li><span class="n">1</span><span>정해진 <b>선</b>에 선다.</span></li>
+        <li><span class="n">2</span><span>휴지 한 칸을 <b>불거나 살짝 던져</b> 날린다.</span></li>
+        <li><span class="n">3</span><span>가장 멀리 떨어뜨린 사람이 <b>승리</b>.</span></li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <p class="section-label">룰</p>
+      <ul class="rules">
+        <li><span><b>구기기 금지</b> — 휴지는 편 상태 그대로.</span></li>
+      </ul>
+    </div>
+
+    <div class="spacer"></div>
+    <a class="back" href="../index.html">← 게임 목록</a>
+  </div>
+
+  <script>
+    const fsBtn = document.getElementById("fsBtn");
+    const docEl = document.documentElement;
+    const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+    const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+    const isFs = () => document.fullscreenElement || document.webkitFullscreenElement;
+    if (!reqFs) { fsBtn.style.display = "none"; }
+    else {
+      fsBtn.onclick = () => { isFs() ? exitFs.call(document) : reqFs.call(docEl); };
+      const sync = () => { fsBtn.textContent = isFs() ? "×" : "⛶"; };
+      document.addEventListener("fullscreenchange", sync);
+      document.addEventListener("webkitfullscreenchange", sync);
+    }
+  </script>
+</body>
+</html>

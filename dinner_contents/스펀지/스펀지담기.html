@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <title>스펀지 담기</title>
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --surface: #141416;
+      --surface-2: #1c1c1f;
+      --border: #2a2a2e;
+      --border-strong: #3a3a40;
+      --text: #f5f5f6;
+      --muted: #8a8a92;
+      --muted-2: #6a6a72;
+      --white: #f5f5f6;
+      --warn: #ff6b5e;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background: radial-gradient(80% 50% at 50% -10%, #1a1a1d 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .app {
+      position: relative;
+      width: 100%;
+      max-width: 860px;
+      min-height: 100dvh;
+      padding: clamp(20px, 4vh, 48px) clamp(20px, 5vw, 56px);
+      display: flex;
+      flex-direction: column;
+    }
+    .screen { display: none; flex: 1; flex-direction: column; }
+    .screen.active { display: flex; animation: fade .3s ease; }
+    @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    .eyebrow { font-size: 13px; letter-spacing: 3px; color: var(--muted-2); text-transform: uppercase; font-weight: 600; }
+    h1 { font-size: clamp(32px, 6vw, 52px); margin: 6px 0 10px; letter-spacing: -1.5px; font-weight: 800; }
+    .sub { color: var(--muted); font-size: clamp(14px, 1.6vw, 17px); line-height: 1.6; margin: 0 0 clamp(20px, 3vh, 32px); }
+
+    /* ── 규칙 요약 카드 ── */
+    .rules { list-style: none; margin: 0 0 clamp(20px, 3vh, 28px); padding: 0; display: grid; gap: 8px; }
+    .rules li {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 13px 16px; font-size: 14px; color: var(--text); display: flex; gap: 12px; align-items: baseline;
+    }
+    .rules li .n { color: var(--muted-2); font-weight: 800; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+    .rules li b { color: var(--white); }
+
+    /* ── 그릇 편집 ── */
+    .edit-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: clamp(20px,3vh,28px); }
+    .edit-block .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
+    .edit-block .row .t { font-size: 15px; font-weight: 700; }
+    .edit-block .row .hint { font-size: 12px; color: var(--muted); }
+    .edit-block textarea {
+      width: 100%; margin-top: 12px; background: var(--bg); border: 1px solid var(--border-strong); border-radius: 12px;
+      color: var(--text); font: inherit; font-size: 14px; padding: 12px; resize: vertical; min-height: 84px; display: none;
+    }
+    .edit-block.open textarea { display: block; }
+    .edit-block .caret { color: var(--muted); transition: transform .2s ease; }
+    .edit-block.open .caret { transform: rotate(180deg); }
+
+    /* ── 공통 버튼 ── */
+    .btn {
+      border: none; border-radius: 16px; padding: clamp(16px, 2.2vh, 20px);
+      font-size: clamp(16px, 2vw, 19px); font-weight: 700; cursor: pointer; width: 100%;
+      background: var(--white); color: #0a0a0b; font-family: inherit;
+      transition: transform .12s ease, opacity .18s ease, filter .18s ease;
+    }
+    .btn:hover { filter: brightness(0.92); }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { opacity: .35; cursor: default; }
+    .btn.ghost {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-size: 15px; font-weight: 600;
+    }
+    .btn.ghost:hover { border-color: var(--border-strong); color: var(--text); filter: none; }
+    .spacer { flex: 1; }
+    .footer-actions { display: grid; gap: 10px; margin-top: clamp(20px, 4vh, 32px); }
+    .footer-actions.two { grid-template-columns: 1fr 1fr; }
+
+    /* ── 전체화면 버튼 ── */
+    .fs-btn {
+      position: fixed; top: 14px; right: 14px; z-index: 50;
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+      font-size: 19px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+      transition: color .18s ease, border-color .18s ease, transform .12s ease;
+    }
+    .fs-btn:hover { color: var(--text); border-color: var(--border-strong); }
+    .fs-btn:active { transform: scale(0.94); }
+
+    /* ── 추첨 화면 ── */
+    .center-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: clamp(12px, 2.5vh, 22px); }
+    .draw-label { font-size: 13px; letter-spacing: 3px; color: var(--muted-2); text-transform: uppercase; font-weight: 700; }
+    .slot {
+      width: min(90vw, 520px);
+      height: min(56vh, 480px);
+      flex: 0 0 auto;
+      border-radius: 28px; background: var(--surface); border: 1px solid var(--border-strong);
+      display: grid; place-items: center; overflow: hidden; position: relative;
+      padding: 14px;
+      box-shadow: 0 20px 60px -30px rgba(0,0,0,.9);
+    }
+    /* 사진은 흰 배경 제품컷 → 슬롯도 흰색으로 맞춰 레터박스(잘림 착시) 제거 */
+    #toolSlot { background: #fff; }
+    .slot img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
+    .slot .bowl-txt { font-size: clamp(36px, 9vw, 72px); font-weight: 900; letter-spacing: -1px; padding: 14px; word-break: keep-all; }
+    .slot.spin { animation: buzz .28s ease infinite; }
+    @keyframes buzz { 0%,100%{ transform: translateX(0);} 25%{transform:translateX(-2px);} 75%{transform:translateX(2px);} }
+    .picked-name {
+      font-size: clamp(30px, 6vw, 48px); font-weight: 900; letter-spacing: -1px; margin-top: clamp(18px,3vh,26px);
+      min-height: 1.1em; word-break: keep-all;
+    }
+    .picked-name.reveal { animation: pop .4s cubic-bezier(.2,1.4,.4,1); }
+    @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    /* ── 게임(타이머) 화면 ── */
+    .play-head { display: flex; justify-content: center; gap: clamp(16px, 5vw, 40px); flex-wrap: wrap; margin-bottom: clamp(14px,3vh,26px); }
+    .chip {
+      display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 999px; padding: 8px 14px 8px 8px;
+    }
+    .chip img { width: 34px; height: 34px; border-radius: 8px; object-fit: contain; background: #fff; }
+    .chip .k { font-size: 11px; color: var(--muted-2); letter-spacing: 1px; text-transform: uppercase; }
+    .chip .v { font-size: 15px; font-weight: 800; }
+    .blindfold { text-align: center; color: var(--warn); font-weight: 700; font-size: clamp(14px,2vw,17px); margin-bottom: clamp(8px,2vh,16px); }
+
+    .ring-wrap { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+    .ring { width: min(72vw, 340px); height: min(72vw, 340px); transform: rotate(-90deg); }
+    .ring .track { fill: none; stroke: var(--surface-2); stroke-width: 14; }
+    .ring .bar { fill: none; stroke: var(--white); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset .1s linear, stroke .3s ease; }
+    .ring-num {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .ring-num .big { font-size: clamp(64px, 18vw, 132px); font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -3px; line-height: 1; }
+    .ring-num .unit { color: var(--muted); font-size: 15px; letter-spacing: 3px; margin-top: 6px; text-transform: uppercase; }
+    .ring-num .big.warn { color: var(--warn); }
+    .ring-num .done { font-size: clamp(40px, 10vw, 72px); font-weight: 900; letter-spacing: -2px; }
+    .ring-num .done.blink { animation: blink .5s steps(2, jump-none) infinite; }
+    @keyframes blink { 50% { opacity: .25; } }
+  </style>
+</head>
+<body>
+  <button id="fsBtn" class="fs-btn" title="전체화면" aria-label="전체화면">⛶</button>
+  <div class="app">
+
+    <!-- 1) 홈 -->
+    <section id="screen-home" class="screen active">
+      <div class="eyebrow">Dinner Game 8</div>
+      <h1>스펀지 담기</h1>
+      <p class="sub">뽑은 <b>도구</b>와 <b>그릇</b>으로, 안대를 쓰고 1분 동안 스펀지를 가장 많이 담는 사람이 승리.</p>
+
+      <ul class="rules">
+        <li><span class="n">1</span><span>바닥에 스펀지를 넓게 깔아둔다. 팀당 1명 참여.</span></li>
+        <li><span class="n">2</span><span>뽑기로 <b>도구</b>와 <b>그릇</b>을 각각 정한다.</span></li>
+        <li><span class="n">3</span><span><b>안대 착용</b> 후, <b>1분간</b> 뽑은 도구만 사용해 그릇에 담는다.</span></li>
+        <li><span class="n">4</span><span>손으로 직접 담기 금지. 더 많이 담은 사람이 승리.</span></li>
+      </ul>
+
+      <div class="edit-block" id="bowlEdit">
+        <div class="row" id="bowlEditToggle">
+          <span class="t">🥣 그릇 목록 편집</span>
+          <span class="hint"><span id="bowlCount">0</span>개 · <span class="caret">▾</span></span>
+        </div>
+        <textarea id="bowlText" placeholder="한 줄에 하나씩 그릇 이름 입력&#10;예) 국그릇&#10;종이컵&#10;프라이팬"></textarea>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="footer-actions">
+        <button class="btn" id="toHomeStart">도구 뽑기 시작 →</button>
+      </div>
+    </section>
+
+    <!-- 2) 도구 추첨 -->
+    <section id="screen-tool" class="screen">
+      <div class="center-col">
+        <div class="draw-label">STEP 1 · 도구 뽑기</div>
+        <div class="slot" id="toolSlot"><img id="toolImg" alt="" /></div>
+        <div class="picked-name" id="toolName"></div>
+      </div>
+      <div class="footer-actions" id="toolFooter"></div>
+    </section>
+
+    <!-- 3) 그릇 추첨 -->
+    <section id="screen-bowl" class="screen">
+      <div class="center-col">
+        <div class="draw-label">STEP 2 · 그릇 뽑기</div>
+        <div class="slot" id="bowlSlot"><div class="bowl-txt" id="bowlGlyph">🥣</div></div>
+        <div class="picked-name" id="bowlName"></div>
+      </div>
+      <div class="footer-actions" id="bowlFooter"></div>
+    </section>
+
+    <!-- 4) 게임(타이머) -->
+    <section id="screen-play" class="screen">
+      <div class="play-head">
+        <div class="chip"><img id="playToolImg" alt="" /><div><div class="k">도구</div><div class="v" id="playToolName"></div></div></div>
+        <div class="chip" style="padding-left:14px;"><div><div class="k">그릇</div><div class="v" id="playBowlName"></div></div></div>
+      </div>
+      <div class="blindfold">👁️ 안대 착용 확인 — 손 사용 금지, 도구만!</div>
+
+      <div class="ring-wrap">
+        <svg class="ring" id="ring" viewBox="0 0 260 260">
+          <circle class="track" cx="130" cy="130" r="116"></circle>
+          <circle class="bar"   cx="130" cy="130" r="116" id="ringBar"></circle>
+        </svg>
+        <div class="ring-num">
+          <div class="big" id="timeBig">60</div>
+          <div class="unit" id="timeUnit">seconds</div>
+        </div>
+      </div>
+
+      <div class="footer-actions" id="playFooter">
+        <button class="btn" id="startBtn">시작</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // ── 도구 (사진 파일과 1:1) ─────────────────────────────
+    const TOOLS = [
+      { name: "고양이 모래삽", file: "고양이 모래삽.jpg" },
+      { name: "효자손",       file: "효자손.jpg" },
+      { name: "칼",           file: "칼.jpg" },
+      { name: "주걱",         file: "주걱.jpg" },
+      { name: "집게",         file: "집게.jpg" },
+      { name: "포크",         file: "포크.jpg" },
+    ];
+
+    // ── 그릇 (펜션 현장 확인 후 확정 — 홈 화면에서 편집 가능) ──
+    let BOWLS = ["국그릇", "밥공기", "종이컵", "접시", "프라이팬", "냄비"];
+
+    const GAME_SECONDS = 60;     // 게임 제한시간
+    const RING_CIRC = 2 * Math.PI * 116;   // 원형 게이지 둘레
+
+    // ── 상태 ────────────────────────────────────────────────
+    let pickedTool = null, pickedBowl = null;
+    let startAt = 0, timerInt = null, running = false, lastWhole = -1, audioCtx = null;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = { home: $("screen-home"), tool: $("screen-tool"), bowl: $("screen-bowl"), play: $("screen-play") };
+    function show(name) {
+      Object.values(screens).forEach(s => s.classList.remove("active"));
+      screens[name].classList.add("active");
+    }
+    const src = (file) => encodeURI(file);   // 공백·한글 파일명 안전 처리
+
+    // 이미지 프리로드 (슬롯 애니메이션 매끄럽게)
+    TOOLS.forEach(t => { const im = new Image(); im.src = src(t.file); });
+
+    // ── 그릇 편집 ────────────────────────────────────────────
+    function syncBowlUI() {
+      $("bowlText").value = BOWLS.join("\n");
+      $("bowlCount").textContent = BOWLS.length;
+    }
+    function readBowls() {
+      const list = $("bowlText").value.split("\n").map(s => s.trim()).filter(Boolean);
+      BOWLS = list;
+      $("bowlCount").textContent = BOWLS.length;
+    }
+    $("bowlEditToggle").onclick = () => $("bowlEdit").classList.toggle("open");
+    $("bowlText").addEventListener("input", readBowls);
+    syncBowlUI();
+
+    // ── 슬롯 추첨: 빠른 셔플 → '정지'로 멈춤 ────────────────────
+    let spinInt = null, spinCurrent = null;
+    function startSpin(items, onTick) {
+      stopSpinRaw();
+      spinCurrent = items[Math.floor(Math.random() * items.length)];
+      onTick(spinCurrent);
+      spinInt = setInterval(() => {
+        spinCurrent = items[Math.floor(Math.random() * items.length)];
+        onTick(spinCurrent);
+      }, 50);                      // 빠른 셔플
+    }
+    function stopSpinRaw() { if (spinInt) { clearInterval(spinInt); spinInt = null; } }
+    function setFooter(id, html) { $(id).innerHTML = html; }
+
+    // ── STEP 1: 도구 뽑기 ───────────────────────────────────
+    $("toHomeStart").onclick = () => { show("tool"); drawTool(); };
+    function drawTool() {
+      $("toolName").textContent = "";
+      $("toolName").classList.remove("reveal");
+      $("toolSlot").classList.add("spin");
+      setFooter("toolFooter", '<button class="btn" id="toolStop">정지</button>');
+      $("toolStop").onclick = stopTool;
+      startSpin(TOOLS, (t) => { $("toolImg").src = src(t.file); });
+    }
+    function stopTool() {
+      stopSpinRaw();
+      pickedTool = spinCurrent;
+      $("toolSlot").classList.remove("spin");
+      $("toolImg").src = src(pickedTool.file);
+      $("toolName").textContent = pickedTool.name;
+      $("toolName").classList.add("reveal");
+      buzz();
+      setFooter("toolFooter",
+        '<div class="footer-actions two" style="margin:0">' +
+        '<button class="btn ghost" id="toolAgain">다시 뽑기</button>' +
+        '<button class="btn" id="toolNext">그릇 뽑기 →</button></div>');
+      $("toolAgain").onclick = drawTool;
+      $("toolNext").onclick = () => { show("bowl"); drawBowl(); };
+    }
+
+    // ── STEP 2: 그릇 뽑기 ───────────────────────────────────
+    function drawBowl() {
+      if (BOWLS.length === 0) { stopSpinRaw(); alert("그릇 목록이 비어 있어요. 홈에서 먼저 입력해 주세요."); show("home"); return; }
+      $("bowlName").textContent = "";
+      $("bowlName").classList.remove("reveal");
+      $("bowlSlot").classList.add("spin");
+      setFooter("bowlFooter", '<button class="btn" id="bowlStop">정지</button>');
+      $("bowlStop").onclick = stopBowl;
+      startSpin(BOWLS, (b) => { $("bowlGlyph").textContent = b; });
+    }
+    function stopBowl() {
+      stopSpinRaw();
+      pickedBowl = spinCurrent;
+      $("bowlSlot").classList.remove("spin");
+      $("bowlGlyph").textContent = "🥣";
+      $("bowlName").textContent = pickedBowl;
+      $("bowlName").classList.add("reveal");
+      buzz();
+      setFooter("bowlFooter",
+        '<div class="footer-actions two" style="margin:0">' +
+        '<button class="btn ghost" id="bowlAgain">다시 뽑기</button>' +
+        '<button class="btn" id="bowlNext">게임 시작 →</button></div>');
+      $("bowlAgain").onclick = drawBowl;
+      $("bowlNext").onclick = goPlay;
+    }
+
+    // ── STEP 3: 게임 준비 ───────────────────────────────────
+    function goPlay() {
+      $("playToolImg").src = src(pickedTool.file);
+      $("playToolName").textContent = pickedTool.name;
+      $("playBowlName").textContent = pickedBowl;
+      resetRing();
+      $("playFooter").innerHTML = '<button class="btn" id="startBtn">시작</button>';
+      $("startBtn").onclick = startTimer;
+      show("play");
+    }
+
+    function resetRing() {
+      const bar = $("ringBar");
+      bar.style.strokeDasharray = RING_CIRC;
+      bar.style.strokeDashoffset = 0;
+      bar.style.stroke = "var(--white)";
+      const big = $("timeBig");
+      big.className = "big"; big.textContent = GAME_SECONDS;
+      $("timeUnit").textContent = "seconds";
+    }
+
+    // ── 타이머 ──────────────────────────────────────────────
+    function startTimer() {
+      ensureAudio();
+      running = true; lastWhole = -1;
+      startAt = Date.now();
+      $("playFooter").innerHTML = '<button class="btn ghost" id="quitBtn">그만두기</button>';
+      $("quitBtn").onclick = () => { stopTimer(); finish(true); };
+      clearInterval(timerInt);
+      timerInt = setInterval(tick, 80);
+      tick();
+    }
+    function tick() {
+      const remain = GAME_SECONDS - (Date.now() - startAt) / 1000;
+      if (remain <= 0) { render(0); stopTimer(); finish(false); return; }
+      render(remain);
+      const whole = Math.ceil(remain);
+      if (whole !== lastWhole) {          // 매 초 경계
+        lastWhole = whole;
+        if (whole <= 3) beep(880, 0.12);  // 마지막 3초 카운트
+      }
+    }
+    function render(remain) {
+      const bar = $("ringBar");
+      const frac = Math.max(0, remain / GAME_SECONDS);
+      bar.style.strokeDashoffset = RING_CIRC * (1 - frac);
+      const big = $("timeBig");
+      big.textContent = Math.ceil(remain);
+      if (remain <= 10) { big.classList.add("warn"); bar.style.stroke = "var(--warn)"; }
+      else { big.classList.remove("warn"); bar.style.stroke = "var(--white)"; }
+    }
+    function stopTimer() { running = false; clearInterval(timerInt); }
+
+    function finish(quit) {
+      const num = $("timeBig").parentElement;   // .ring-num
+      if (!quit) {
+        num.innerHTML = '<div class="done blink">종료!</div>';
+        beep(660, 0.25); setTimeout(() => beep(520, 0.4), 260);
+        if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+        $("ringBar").style.strokeDashoffset = RING_CIRC;   // 게이지 완전 소진
+      } else {
+        num.innerHTML = '<div class="done">중단</div>';
+      }
+      $("playFooter").innerHTML =
+        '<div class="footer-actions two" style="margin:0">' +
+        '<button class="btn ghost" id="againBtn">다음 참가자</button>' +
+        '<button class="btn" id="homeBtn">처음으로</button></div>';
+      $("againBtn").onclick = () => { show("tool"); drawTool(); };
+      $("homeBtn").onclick = () => show("home");
+    }
+
+    // ── 사운드 ──────────────────────────────────────────────
+    function ensureAudio() {
+      if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function beep(freq, dur) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = "sine"; osc.frequency.value = freq;
+      gain.gain.value = 0.0001;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      const t = audioCtx.currentTime;
+      gain.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    }
+    function buzz() { if (navigator.vibrate) navigator.vibrate(30); }
+
+    // ── 스페이스바로 셔플 정지 ──────────────────────────────
+    document.addEventListener("keydown", (e) => {
+      if (e.code !== "Space" || !spinInt) return;   // 셔플 중일 때만 반응
+      e.preventDefault();
+      if (screens.tool.classList.contains("active")) stopTool();
+      else if (screens.bowl.classList.contains("active")) stopBowl();
+    });
+
+    // ── 전체화면 ────────────────────────────────────────────
+    const fsBtn = $("fsBtn");
+    const docEl = document.documentElement;
+    const reqFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+    const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+    function isFs() { return document.fullscreenElement || document.webkitFullscreenElement; }
+    if (!reqFs) {
+      fsBtn.style.display = "none";          // 지원 안 하는 브라우저(예: 아이폰 사파리)에선 숨김
+    } else {
+      fsBtn.onclick = () => { isFs() ? exitFs.call(document) : reqFs.call(docEl); };
+      const syncIcon = () => { fsBtn.textContent = isFs() ? "×" : "⛶"; fsBtn.title = isFs() ? "전체화면 종료" : "전체화면"; };
+      document.addEventListener("fullscreenchange", syncIcon);
+      document.addEventListener("webkitfullscreenchange", syncIcon);
+    }
+  </script>
+</body>
+</html>
