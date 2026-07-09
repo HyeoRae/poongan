@@ -361,7 +361,6 @@ export function useLobbyMembers() {
           if (active && data) setMembers(data as LobbyMember[]);
         });
 
-    refetch(); // 초기 로드
     const channel = supabase
       .channel("event-lobby-members")
       .on(
@@ -369,7 +368,10 @@ export function useLobbyMembers() {
         { event: "*", schema: "public", table: "event_lobby_members" },
         () => refetch()
       )
-      .subscribe();
+      // 구독이 확립된 뒤에 초기 로드 → 구독 전 발생한 입장 이벤트 누락 방지
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") refetch();
+      });
 
     return () => {
       active = false;

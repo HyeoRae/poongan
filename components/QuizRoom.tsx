@@ -47,9 +47,10 @@ export default function QuizRoom({
 
   const [pending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
-  // 내 선택(낙관적) — 서버 재조회(myAnswer)로도 동기화
+  // 내 선택(낙관적) — 서버 재조회(myAnswer)로 동기화하고, 문제(current_seq)가 바뀌면 초기화.
+  // (문제가 바뀌었는데 myAnswer 가 계속 null 이면 초기화가 안 돼 이전 선택이 남던 버그 수정)
   const [myChoice, setMyChoice] = useState<number | null>(myAnswer);
-  useEffect(() => setMyChoice(myAnswer), [myAnswer]);
+  useEffect(() => setMyChoice(myAnswer), [myAnswer, quiz.current_seq]);
 
   // 상태/문제 전환 시 서버 재조회(quiz_current·myAnswer·scores 재하이드레이션)
   const lastKey = useRef("");
