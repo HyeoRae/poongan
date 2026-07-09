@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Profile,
+  Transaction,
   DrawState,
   TeamTotal,
   PenaltyState,
@@ -50,6 +51,41 @@ export function useMyGold(userId: string, initial: number) {
   }, [userId]);
 
   return gold;
+}
+
+// 🗡️ 도둑맞음 알림 — 내 원장(transactions)에 steal(음수) 행이 들어오면 감지.
+// transactions 는 이미 realtime 발행 + RLS(read_tx)로 본인 행만 내려오므로 자기 것만 수신.
+export function useStealAlerts(userId: string) {
+  const [alert, setAlert] = useState<{ amount: number; id: number } | null>(null);
+  const clear = useCallback(() => setAlert(null), []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`my-tx-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const row = payload.new as Transaction;
+          if (row.type === "steal" && row.amount < 0) {
+            setAlert({ amount: -row.amount, id: row.id });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+
+  return { alert, clear };
 }
 
 // 전체 프로필을 실시간 구독 (대시보드 — 팀/멤버 풍산토큰 변동 반영)

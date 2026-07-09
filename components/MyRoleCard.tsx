@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PlayerRoleKind } from "@/lib/types";
+import RoleAbilityPanel from "@/components/RoleAbilityPanel";
 
 // PNG 우선 → 없으면 SVG 폴백 (public/role-cards/<name>.png|svg)
 function CardArt({ name, alt }: { name: string; alt: string }) {
@@ -20,25 +21,91 @@ function CardArt({ name, alt }: { name: string; alt: string }) {
   );
 }
 
+type Target = { id: string; name: string };
+
+const ROLE_META: Record<PlayerRoleKind, { art: string; label: string; accent: string }> = {
+  member: { art: "member", label: "충성 팀원", accent: "#f5c542" },
+  spy: { art: "spy", label: "스파이", accent: "#e11d2e" },
+  jester: { art: "jester", label: "광대", accent: "#a855f7" },
+  thief: { art: "thief", label: "도둑", accent: "#f59e0b" },
+  hacker: { art: "hacker", label: "해커", accent: "#22d3ee" },
+  leader: { art: "leader", label: "팀장", accent: "#84cc16" },
+};
+
+const ABILITY_ROLES: PlayerRoleKind[] = ["thief", "hacker", "leader"];
+
+function RoleDesc({
+  role,
+  teamName,
+  accent,
+}: {
+  role: PlayerRoleKind;
+  teamName?: string | null;
+  accent: string;
+}) {
+  const hi = { color: accent };
+  switch (role) {
+    case "spy":
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>스파이</span>입니다. 들키지 않고 우리 팀 토큰을
+          깎거나 상대에게 흘려, <b>상대팀이 이기게</b> 만드세요.
+        </p>
+      );
+    case "jester":
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>광대</span>입니다. 조용히 가장 가난하게 —{" "}
+          <b>{teamName ?? "우리 팀"}이 우승</b>하고 그 안에서 <b>당신이 개인 꼴찌</b>면
+          혼자 승리합니다. 단, 팀이 지면 꽝!
+        </p>
+      );
+    case "thief":
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>도둑</span>입니다. 아무나 골라 지갑의 <b>10%</b>를
+          노리세요 — <b>50% 확률</b>로 성공. 단, <b>한 사람당 한 번</b>뿐!
+        </p>
+      );
+    case "hacker":
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>해커</span>입니다. <b>100토큰</b>으로 전원의 지갑을{" "}
+          <b>10분간</b> 훔쳐봅니다. 누가 부자인지 파악해 판을 읽으세요.
+        </p>
+      );
+    case "leader":
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>팀장</span>입니다. <b>팀명</b>을 바꾸고 팀원들의{" "}
+          <b>잔고</b>를 언제든 들여다볼 수 있습니다.
+        </p>
+      );
+    default:
+      return (
+        <p className="font-semibold text-white/90">
+          당신은 <span style={hi}>충성 팀원</span>입니다. 우리 팀에 숨어있는{" "}
+          <b>스파이 1명</b>을 색출하고 팀 토큰을 지키세요.
+        </p>
+      );
+  }
+}
+
 export default function MyRoleCard({
   role,
   teamColor,
   teamName,
+  targets = [],
 }: {
   role: PlayerRoleKind;
   teamColor?: string | null;
   teamName?: string | null;
+  targets?: Target[];
 }) {
   const [flipped, setFlipped] = useState(false);
-  const isSpy = role === "spy";
-  const isJester = role === "jester";
-  const artName = isSpy ? "spy" : isJester ? "jester" : "member";
-  const roleLabel = isSpy ? "스파이" : isJester ? "광대" : "충성 팀원";
-  const accent = isSpy
-    ? "#e11d2e"
-    : isJester
-    ? "#a855f7"
-    : teamColor || "#f5c542";
+  const meta = ROLE_META[role] ?? ROLE_META.member;
+  const accent = role === "member" ? teamColor || meta.accent : meta.accent;
+  const hasAbility = ABILITY_ROLES.includes(role);
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4">
@@ -67,31 +134,27 @@ export default function MyRoleCard({
               className="card3d-face card3d-back overflow-hidden rounded-2xl"
               style={{ boxShadow: `0 8px 36px ${accent}55` }}
             >
-              <CardArt name={artName} alt={roleLabel} />
+              <CardArt name={meta.art} alt={meta.label} />
             </div>
           </div>
         </button>
 
         {flipped && (
-          <div className="w-full rounded-xl border px-3 py-2.5 text-center text-sm" style={{ borderColor: accent + "66" }}>
-            {isSpy ? (
-              <p className="font-semibold text-white/90">
-                당신은 <span style={{ color: accent }}>스파이</span>입니다. 들키지 않고
-                우리 팀 토큰을 깎거나 상대에게 흘려, <b>상대팀이 이기게</b> 만드세요.
-              </p>
-            ) : isJester ? (
-              <p className="font-semibold text-white/90">
-                당신은 <span style={{ color: accent }}>광대</span>입니다. 조용히 가장
-                가난하게 — <b>{teamName ?? "우리 팀"}이 우승</b>하고 그 안에서{" "}
-                <b>당신이 개인 꼴찌</b>면 혼자 승리합니다. 단, 팀이 지면 꽝!
-              </p>
-            ) : (
-              <p className="font-semibold text-white/90">
-                당신은 <span style={{ color: accent }}>충성 팀원</span>입니다. 우리 팀에
-                숨어있는 <b>스파이 1명</b>을 색출하고 팀 토큰을 지키세요.
-              </p>
-            )}
+          <div
+            className="w-full rounded-xl border px-3 py-2.5 text-center text-sm"
+            style={{ borderColor: accent + "66" }}
+          >
+            <RoleDesc role={role} teamName={teamName} accent={accent} />
           </div>
+        )}
+
+        {flipped && hasAbility && (
+          <RoleAbilityPanel
+            role={role}
+            targets={targets}
+            teamName={teamName ?? null}
+            accent={accent}
+          />
         )}
 
         {!flipped && (

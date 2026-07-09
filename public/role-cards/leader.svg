@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" width="300" height="420" role="img" aria-label="팀장 카드">
+  <defs>
+    <linearGradient id="bgLead" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2a08"/>
+      <stop offset="1" stop-color="#070a05"/>
+    </linearGradient>
+    <linearGradient id="limeLead" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bef264"/>
+      <stop offset="0.5" stop-color="#84cc16"/>
+      <stop offset="1" stop-color="#4d7c0f"/>
+    </linearGradient>
+    <radialGradient id="glowLead" cx="50%" cy="42%" r="55%">
+      <stop offset="0" stop-color="#84cc16" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#84cc16" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="6" y="6" width="288" height="408" rx="22" fill="url(#bgLead)" stroke="url(#limeLead)" stroke-width="3"/>
+  <ellipse cx="150" cy="185" rx="120" ry="120" fill="url(#glowLead)"/>
+
+  <!-- 왕관 엠블럼 -->
+  <g transform="translate(150 180)">
+    <path d="M-80 44 L-80 -30 L-40 6 L0 -46 L40 6 L80 -30 L80 44 Z" fill="url(#limeLead)" stroke="#4d7c0f" stroke-width="2"/>
+    <rect x="-80" y="44" width="160" height="20" rx="6" fill="url(#limeLead)"/>
+    <circle cx="0" cy="-46" r="9" fill="#070a05"/>
+    <circle cx="-80" cy="-30" r="7" fill="#070a05"/>
+    <circle cx="80" cy="-30" r="7" fill="#070a05"/>
+    <circle cx="0" cy="20" r="8" fill="#070a05" fill-opacity="0.6"/>
+    <circle cx="-40" cy="26" r="6" fill="#070a05" fill-opacity="0.6"/>
+    <circle cx="40" cy="26" r="6" fill="#070a05" fill-opacity="0.6"/>
+  </g>
+
+  <text x="150" y="330" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="46" font-weight="900" letter-spacing="2" fill="url(#limeLead)">팀장</text>
+  <text x="150" y="362" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="3" fill="#bef264" fill-opacity="0.8">LEADER</text>
+  <text x="150" y="392" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" fill="#ffffff" fill-opacity="0.55">팀명 변경 · 팀원 잔고 조회</text>
+</svg>

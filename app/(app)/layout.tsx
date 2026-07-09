@@ -8,6 +8,7 @@ import PenaltyCeremony from "@/components/PenaltyCeremony";
 import EventLobby from "@/components/EventLobby";
 import NotificationGate from "@/components/NotificationGate";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import StealAlert from "@/components/StealAlert";
 import type { DrawState, PenaltyState, EventLobby as EventLobbyState } from "@/lib/types";
 
 const IDLE_DRAW: DrawState = {
@@ -96,6 +97,7 @@ export default async function AppLayout({
         }}
         initial={eventLobby}
       />
+      <StealAlert userId={profile.id} />
       <NotificationGate />
       <ServiceWorkerRegister />
     </div>

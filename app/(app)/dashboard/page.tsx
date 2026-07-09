@@ -49,6 +49,11 @@ export default async function DashboardPage() {
   const me = roster.find((p) => p.id === user?.id);
   const myTeam = ((teams as Team[]) ?? []).find((t) => t.id === me?.team_id);
 
+  // 역할 능력(도둑 훔치기 등) 대상 목록 — 본인·관리자·봇 제외.
+  const roleTargets = roster
+    .filter((p) => p.id !== user?.id && p.role === "player" && !p.is_bot)
+    .map((p) => ({ id: p.id, name: p.display_name }));
+
   // 벌칙 이력 — 표시용 이름/아바타를 공개 로스터에서 조인.
   const nameOf = new Map(roster.map((p) => [p.id, p]));
   const penaltyPicks: PenaltyPick[] = ((picksRaw as PenaltyPick[]) ?? []).map(
@@ -77,6 +82,7 @@ export default async function DashboardPage() {
           role={role.role}
           teamColor={myTeam?.color}
           teamName={myTeam?.name}
+          targets={roleTargets}
         />
       )}
       <Dashboard

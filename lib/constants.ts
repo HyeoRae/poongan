@@ -29,10 +29,10 @@ export const TRANSFER_FEE_PCT = 0.2;
 // 큰손(fee_half) 카드 발동 시 절반 수수료(10%). 0016 transfer_gold 의 v_rate(0.10) 와 값 일치.
 export const TRANSFER_FEE_HALF_PCT = 0.1;
 
-// ---------- 효과카드 가챠 상수 (0016 draw_effect_card 와 값 일치) ----------
+// ---------- 효과카드 가챠 상수 (0027 draw_effect_card 와 값 일치) ----------
 export const GACHA_FREE = 3; // 초기 무료 뽑기 횟수
-export const GACHA_BASE = 30; // 유료 첫 뽑기 비용
-export const GACHA_STEP = 15; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
+export const GACHA_BASE = 200; // 유료 첫 뽑기 비용 (카드 영향력↑ → 비싸게)
+export const GACHA_STEP = 50; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
 
 // 등급 추첨 확률 (꽝 40% / 상시 45% / 희귀 15%)
 // ⚠ 여기는 개별확률(.4/.45/.15)이지만 SQL(0016 draw_effect_card)은 누적 임계값(< 0.40, < 0.85)으로 표현한다.
@@ -64,6 +64,12 @@ export const RACE_ANIMALS = [
 // 대기실 동물 수 범위 (풀 크기를 넘지 않음)
 export const RACE_SLOTS_MIN = 2;
 export const RACE_SLOTS_MAX = RACE_ANIMALS.length;
+
+// ---------- 비밀역할 능력 상수 (0028_role_abilities.sql 와 값 일치) ----------
+export const THIEF_STEAL_PCT = 0.1; // 도둑: 대상 지갑의 10%를 노림
+export const THIEF_SUCCESS_PCT = 0.5; // 도둑: 훔치기 성공 확률 50%
+export const HACKER_SCAN_COST = 100; // 해커: 전원 잔액 조회 1회 비용(토큰)
+export const HACKER_WINDOW_MIN = 10; // 해커: 조회 창 유지 시간(분)
 
 // 효과 종류 키 (프리셋 effect_key 와 일치)
 export type EffectKey =

@@ -37,7 +37,14 @@ export async function peekRole(
   if (error) return { ok: false, message: error.message };
   revalidatePath("/card");
   const role = (data as { role?: string })?.role ?? "member";
-  const label = role === "spy" ? "스파이 🕵️" : role === "jester" ? "광대 🃏" : "충성 팀원";
+  const ROLE_LABELS: Record<string, string> = {
+    spy: "스파이 🕵️",
+    jester: "광대 🃏",
+    thief: "도둑 🗡️",
+    hacker: "해커 🖥️",
+    leader: "팀장 👑",
+  };
+  const label = ROLE_LABELS[role] ?? "충성 팀원";
   return { ok: true, message: `엿본 결과: ${label}`, role };
 }
 

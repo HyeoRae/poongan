@@ -227,9 +227,15 @@ export type PenaltyPick = {
   avatar_url?: string | null;
 };
 
-// ---------- 비밀 역할 (스파이 / 광대) ----------
-// member(일반) | spy(스파이) | jester(광대). 추후 역할이 추가되면 여기에 값을 늘린다.
-export type PlayerRoleKind = "member" | "spy" | "jester";
+// ---------- 비밀 역할 ----------
+// member(일반) | spy(스파이) | jester(광대) | thief(도둑) | hacker(해커) | leader(팀장).
+export type PlayerRoleKind =
+  | "member"
+  | "spy"
+  | "jester"
+  | "thief"
+  | "hacker"
+  | "leader";
 
 export type PlayerRole = {
   user_id: string;
