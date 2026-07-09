@@ -172,3 +172,8 @@
 퀴즈 초기화 시 "DELETE requires a WHERE clause" 오류로 초기화가 안 되던 문제 수정
 테스트 봇도 대기실이 열리면 자동으로 입장하도록 갱신 (npm run bots 재실행 필요)
 ※ 배포 전 supabase/migrations/0024_quiz_reset_fix.sql · 0025_lobby_members.sql 를 번호순으로 SQL Editor에서 실행 필요
+
+ v2.54 : 입장 후 이탈한 사람은 벌칙 대상에서 자동 제외
+대기실에 입장했더라도 퀴즈에서 한 문제도 제출하지 않은 사람은 최저점·서든데스·벌칙 후보에서 자동 제외 (입장만 하고 앱을 끄거나 연결이 끊긴 사람이 0점으로 억울하게 벌칙에 걸리던 문제 방지)
+한 문제라도 푼 사람은 정상 참가자로 유지 · 전원 미제출인 극단적 경우엔 전체 참가자로 폴백
+※ 배포 전 supabase/migrations/0026_quiz_loser_answered_only.sql 을 SQL Editor에서 실행 필요
