@@ -9,7 +9,6 @@ import type {
 } from "@/lib/types";
 import Sutda from "@/components/Sutda";
 import SutdaRoomView from "@/components/SutdaRoom";
-import ContentTabs from "@/components/ContentTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,6 @@ export default async function SutdaPage({
 
     return (
       <div className="space-y-5">
-        <ContentTabs />
         <Sutda me={{ id: me.id, isAdmin }} rooms={list} />
       </div>
     );

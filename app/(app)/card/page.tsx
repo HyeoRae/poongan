@@ -1,6 +1,5 @@
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import ContentTabs from "@/components/ContentTabs";
 import EffectCardGacha from "@/components/EffectCardGacha";
 import MyEffectCards from "@/components/MyEffectCards";
 import { GACHA_BASE, GACHA_STEP } from "@/lib/constants";
@@ -49,7 +48,6 @@ export default async function CardPage() {
 
   return (
     <div className="space-y-5">
-      <ContentTabs />
       <EffectCardGacha
         userId={me.id}
         presets={(presets as EffectCardPreset[]) ?? []}

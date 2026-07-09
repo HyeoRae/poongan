@@ -1,7 +1,6 @@
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import QuizRoom from "@/components/QuizRoom";
-import ContentTabs from "@/components/ContentTabs";
 import type {
   QuizState,
   QuizScore,
@@ -64,7 +63,6 @@ export default async function QuizPage() {
 
   return (
     <div className="space-y-5">
-      <ContentTabs />
       <QuizRoom
         me={{ id: me.id, isAdmin, display_name: me.display_name }}
         initialState={state}

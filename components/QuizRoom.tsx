@@ -14,6 +14,7 @@ import {
   quizReset,
 } from "@/app/(app)/quiz/actions";
 import { startOutfitPachinko } from "@/app/(app)/admin/penaltyActions";
+import { setLobbyActivity } from "@/app/(app)/admin/actions";
 import type {
   QuizState,
   QuizScore,
@@ -368,12 +369,24 @@ export default function QuizRoom({
             <button
               disabled={pending}
               onClick={() => {
-                if (confirm("퀴즈를 초기화할까요? 점수·답안이 모두 지워집니다."))
-                  run(quizReset);
+                if (
+                  confirm(
+                    "퀴즈를 중단할까요? 점수·답안이 지워지고, 대기실에 있던 사람들은 대기실로 돌아갑니다."
+                  )
+                )
+                  run(async () => {
+                    const r = await quizReset();
+                    // 대기실 '퀴즈' 신호 해제 → 입장자들 화면이 대기실로 복귀
+                    if (r.ok) {
+                      await setLobbyActivity(null);
+                      router.refresh();
+                    }
+                    return r;
+                  });
               }}
-              className="w-full rounded-xl border border-border py-2 text-xs font-bold text-white/50 disabled:opacity-50"
+              className="w-full rounded-xl border border-[#ff5a5a]/40 py-2.5 text-xs font-bold text-[#ff9a9a] disabled:opacity-50"
             >
-              🔄 초기화
+              ⛔ 퀴즈 중단 (초기화 · 대기실로)
             </button>
           )}
         </div>
