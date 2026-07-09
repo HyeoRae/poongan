@@ -58,12 +58,14 @@ export default function QuizRoom({
     lastKey.current = key;
   }, [quiz.status, quiz.current_seq, router]);
 
-  // 로컬 시계 틱 (3·2·1 카운트다운 + 20초 제한시간)
+  // 로컬 시계 틱 (3·2·1 카운트다운 + 20초 제한시간) — 문제 진행 중일 때만 돌린다.
+  // (대기·공개·종료 화면에선 카운트다운이 필요없어 불필요한 재렌더를 막음)
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
+    if (quiz.status !== "question") return;
     const t = setInterval(() => setNowMs(Date.now()), 200);
     return () => clearInterval(t);
-  }, []);
+  }, [quiz.status]);
 
   const nameMap = useMemo(
     () => new Map(people.map((p) => [p.user_id, p])),
