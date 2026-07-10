@@ -13,6 +13,7 @@ import type {
   LobbyMember,
   QuizState,
   QuizScore,
+  JackpotPool,
 } from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
@@ -153,6 +154,38 @@ export function useTeamTotals(initial: TeamTotal[]) {
   }, []);
 
   return totals;
+}
+
+// 🎰 공동 잭팟풀(jackpot_pool id=1) 실시간 구독 — 대시보드/관리자 표시.
+// 도박 하우스세·세무조사가 쌓일 때마다 즉시 반영.
+export function useJackpotPool(initial: number) {
+  const [amount, setAmount] = useState(initial);
+
+  useEffect(() => {
+    setAmount(initial);
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("jackpot-pool")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "jackpot_pool", filter: "id=eq.1" },
+        (payload) => {
+          if (payload.eventType !== "DELETE") {
+            setAmount((payload.new as JackpotPool).amount);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return amount;
 }
 
 // 내 효과카드 보유 변동 실시간 — player_effect_cards 변경 시 onChange(보통 router.refresh).

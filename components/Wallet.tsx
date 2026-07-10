@@ -33,7 +33,7 @@ function TxList({
     return <p className="text-sm text-white/40">아직 내역이 없습니다.</p>;
   }
   return (
-    <ul className="space-y-2">
+    <ul className="max-h-[26rem] space-y-2 overflow-y-auto overscroll-contain pr-1">
       {transactions.map((t) => (
         <li
           key={t.id}

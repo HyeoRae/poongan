@@ -322,6 +322,17 @@ export default function SutdaRoomView({
                       <span className="rounded bg-white/10 px-1 text-[10px] text-white/60">딜러</span>
                     )}
                     {won && <span className="text-[10px] font-bold text-gold">👑 승</span>}
+                    {isBetting && !p.folded && p.last_action && (
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                          p.last_action === "콜" || p.last_action === "체크"
+                            ? "bg-white/10 text-white/70"
+                            : "bg-gold/15 text-gold"
+                        }`}
+                      >
+                        {p.last_action}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 text-xs text-white/50">
                     {p.folded ? (
@@ -375,21 +386,21 @@ export default function SutdaRoomView({
               <div className="grid grid-cols-3 gap-2">
                 <button
                   disabled={pending}
-                  onClick={() => run(() => act(room.id, "raise", ppingInc))}
+                  onClick={() => run(() => act(room.id, "raise", ppingInc, "삥"))}
                   className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
                 >
                   삥<span className="block text-[10px] font-normal text-white/40">+{ppingInc.toLocaleString()}</span>
                 </button>
                 <button
                   disabled={pending}
-                  onClick={() => run(() => act(room.id, "raise", halfInc))}
+                  onClick={() => run(() => act(room.id, "raise", halfInc, "하프"))}
                   className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
                 >
                   하프<span className="block text-[10px] font-normal text-white/40">+{halfInc.toLocaleString()}</span>
                 </button>
                 <button
                   disabled={pending}
-                  onClick={() => run(() => act(room.id, "raise", ttadangInc))}
+                  onClick={() => run(() => act(room.id, "raise", ttadangInc, "따당"))}
                   className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
                 >
                   따당<span className="block text-[10px] font-normal text-white/40">+{ttadangInc.toLocaleString()}</span>

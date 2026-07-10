@@ -140,6 +140,16 @@ export type DrawState = {
 export type AppSettings = {
   id: number;
   is_public: boolean;
+  house_tax_on: boolean;
+  house_tax_base: number;
+  house_tax_rich: number;
+  updated_at: string;
+};
+
+// 공동 잭팟풀(jackpot_pool 싱글턴) — 도박 하우스세·세무조사로 모인 재분배 대기 토큰
+export type JackpotPool = {
+  id: number;
+  amount: number;
   updated_at: string;
 };
 
@@ -355,6 +365,7 @@ export type SutdaPlayer = {
   revealed_card2: number | null;
   revealed_rank: number | null;
   revealed_label: string | null;
+  last_action: string | null;
   joined_at: string;
   // 조인해서 채우는 표시용
   display_name?: string;

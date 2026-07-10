@@ -54,7 +54,8 @@ export async function startHand(roomId: number): Promise<SutdaResult> {
 export async function act(
   roomId: number,
   action: "call" | "raise" | "fold",
-  amount = 0
+  amount = 0,
+  label = ""
 ): Promise<SutdaResult> {
   if (action === "raise" && (!Number.isInteger(amount) || amount < 1)) {
     return fail("레이즈 금액을 입력하세요.");
@@ -64,6 +65,7 @@ export async function act(
     p_room: roomId,
     p_action: action,
     p_amount: action === "raise" ? amount : 0,
+    p_label: label || null,
   });
   if (error) return fail(error.message);
   revalidatePath("/sutda");

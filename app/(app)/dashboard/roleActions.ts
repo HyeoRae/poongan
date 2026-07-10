@@ -4,6 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export type Bal = { uid: string; name: string; balance: number };
+export type LeaderTx = {
+  id: number;
+  uid: string;
+  name: string;
+  amount: number;
+  type: string;
+  reason: string | null;
+  created_at: string;
+};
 
 // 도둑: 대상 지갑 10%를 50% 확률로 훔치기 (대상 1명당 1회)
 export async function stealGold(
@@ -61,6 +70,18 @@ export async function leaderBalances(): Promise<{
     message: "조회 완료",
     balances: rows.map((r) => ({ uid: r.uid, name: r.name, balance: r.balance })),
   };
+}
+
+// 팀장: 팀원 거래내역 조회(누구 것인지 이름 라벨 포함, 상시)
+export async function leaderTeamTransactions(): Promise<{
+  ok: boolean;
+  message: string;
+  txs?: LeaderTx[];
+}> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("leader_team_transactions");
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "조회 완료", txs: (data as LeaderTx[]) ?? [] };
 }
 
 // 팀장: 팀명 변경
