@@ -10,6 +10,8 @@ import {
   setBotExcluded,
   resetTeams,
   openEventLobby,
+  distributeJackpot,
+  setHouseTax,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import { resetPenaltyPicks } from "@/app/(app)/admin/penaltyActions";
@@ -26,6 +28,10 @@ export default function AdminPanel({
   games,
   schedule,
   penaltyPicks,
+  jackpot,
+  houseTaxOn,
+  houseTaxBase,
+  houseTaxRich,
 }: {
   players: Profile[];
   grantTargets: Profile[];
@@ -34,6 +40,10 @@ export default function AdminPanel({
   games: AdminGameView[];
   schedule: { id: number; day: number; title: string }[];
   penaltyPicks: PenaltyPick[];
+  jackpot: number;
+  houseTaxOn: boolean;
+  houseTaxBase: number;
+  houseTaxRich: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -68,6 +78,10 @@ export default function AdminPanel({
 
   // 공용 이벤트 대기실 안내 문구
   const [lobbyTitle, setLobbyTitle] = useState("");
+
+  // 도박 하우스세 세율(%) 입력 — 서버 값(소수)을 % 로 표시
+  const [taxBase, setTaxBase] = useState(String(Math.round(houseTaxBase * 100)));
+  const [taxRich, setTaxRich] = useState(String(Math.round(houseTaxRich * 100)));
 
   const assigned = players.filter((p) => p.team_id !== null).length;
   const pickedIds = new Set(penaltyPicks.map((p) => p.user_id));
@@ -249,6 +263,98 @@ export default function AdminPanel({
 
       {tab === "token" && (
         <>
+      {/* 🎰 경제 균형 — 도박 하우스세 · 잭팟 재분배 (빈부격차 완화) */}
+      <section className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="font-bold">🎰 경제 균형</h2>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              houseTaxOn
+                ? "bg-green-500/20 text-green-300"
+                : "bg-white/10 text-white/60"
+            }`}
+          >
+            {houseTaxOn ? "하우스세 ON" : "하우스세 OFF"}
+          </span>
+        </div>
+        <p className="mb-3 text-xs text-white/50">
+          도박 당첨금의 순이익에서 세금을 떼 <b>공동 잭팟풀</b>에 쌓고, 하위 절반에게
+          돌려줘 빈부격차를 완화합니다. (부자=상위 1/3 은 가산 세율)
+        </p>
+
+        {/* 잭팟풀 현황 + 분배 */}
+        <div className="mb-3 rounded-xl border border-border bg-background/50 p-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">현재 잭팟풀</span>
+            <span className="font-black tabular-nums text-gold">
+              🪙 {jackpot.toLocaleString()}
+            </span>
+          </div>
+          <button
+            disabled={pending || jackpot <= 0}
+            onClick={() => {
+              if (
+                confirm(
+                  `잭팟풀 🪙${jackpot.toLocaleString()}을 하위 절반에게 분배할까요?`
+                )
+              )
+                run(distributeJackpot);
+            }}
+            className="mt-2 w-full rounded-xl bg-gold py-2.5 text-sm font-black text-black disabled:opacity-50"
+          >
+            💸 로빈훗 분배 (하위 절반에게)
+          </button>
+        </div>
+
+        {/* 하우스세 세율 조정 */}
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <label className="flex-1 text-xs text-white/60">
+              기본 세율(%)
+              <input
+                type="number"
+                value={taxBase}
+                onChange={(e) => setTaxBase(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
+              />
+            </label>
+            <label className="flex-1 text-xs text-white/60">
+              부자 가산(%)
+              <input
+                type="number"
+                value={taxRich}
+                onChange={(e) => setTaxRich(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button
+              disabled={pending}
+              onClick={() =>
+                run(() =>
+                  setHouseTax(true, Number(taxBase) / 100, Number(taxRich) / 100)
+                )
+              }
+              className="flex-1 rounded-xl bg-gold py-2.5 text-sm font-bold text-black disabled:opacity-50"
+            >
+              세율 적용 · ON
+            </button>
+            <button
+              disabled={pending}
+              onClick={() =>
+                run(() =>
+                  setHouseTax(false, Number(taxBase) / 100, Number(taxRich) / 100)
+                )
+              }
+              className="flex-1 rounded-xl border border-border py-2.5 text-sm font-bold text-white/70 disabled:opacity-50"
+            >
+              하우스세 OFF
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* 개인 풍산토큰 지급/차감 */}
       <section className="rounded-2xl border border-border bg-card p-4">
         <h2 className="mb-3 font-bold">🪙 개인 풍산토큰 지급/차감</h2>

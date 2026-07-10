@@ -21,7 +21,8 @@ export type TxType =
   | "steal"
   | "shop"
   | "fee"      // 송금 수수료(소각)
-  | "gacha";   // 효과카드 뽑기
+  | "gacha"    // 효과카드 뽑기
+  | "jackpot"; // 도박 하우스세 재분배 / 세무조사 징수
 
 // ---------- 경제 상수 ----------
 // 송금 수수료율(20%). 밸런스 조정 시 여기 + 0016 transfer_gold 의 v_rate(0.20) 를 함께 바꾼다.
@@ -33,6 +34,14 @@ export const TRANSFER_FEE_HALF_PCT = 0.1;
 export const GACHA_FREE = 3; // 초기 무료 뽑기 횟수
 export const GACHA_BASE = 200; // 유료 첫 뽑기 비용 (카드 영향력↑ → 비싸게)
 export const GACHA_STEP = 50; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
+
+// ---------- 도박 하우스세 / 재분배 (0032_gambling_rebalance.sql 와 값 일치) ----------
+// 도박 당첨금의 "순이익"에서 떼는 누진 세율 → 공동 잭팟풀에 적립.
+export const HOUSE_TAX_BASE = 0.1; // 기본 세율(하우스 엣지 바닥) — app_settings.house_tax_base 기본값
+export const HOUSE_TAX_RICH = 0.15; // 상위 1/3 가산 세율 — app_settings.house_tax_rich 기본값
+export const UNDERDOG_BOOST = 0.2; // 언더독 카드: 하위 1/3 도박 당첨금 +20%
+export const TAX_AUDIT_PCT = 0.1; // 세무조사 카드: 대상 잔액 징수 비율
+export const JACKPOT_BOTTOM_FRACTION = 0.5; // 로빈훗 분배 대상: 하위 절반
 
 // 등급 추첨 확률 (꽝 40% / 상시 45% / 희귀 15%)
 // ⚠ 여기는 개별확률(.4/.45/.15)이지만 SQL(0016 draw_effect_card)은 누적 임계값(< 0.40, < 0.85)으로 표현한다.
@@ -81,4 +90,6 @@ export type EffectKey =
   | "mulligan"
   | "peek"
   | "fee_free"
-  | "ledger";
+  | "ledger"
+  | "underdog"   // 하위권 도박 배당 +20% (상시)
+  | "tax_audit"; // 부자 잔액 10% 잭팟풀 징수 (1회용)

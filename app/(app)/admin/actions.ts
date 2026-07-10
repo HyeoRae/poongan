@@ -209,6 +209,49 @@ export async function setAppPublic(isPublic: boolean): Promise<ActionResult> {
   };
 }
 
+// 🎰 로빈훗 잭팟 분배 — 잭팟풀 전액을 하위 절반에게 역가중 분배
+export async function distributeJackpot(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("distribute_jackpot");
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  const r = data as { pool?: number; recipients?: number };
+  return {
+    ok: true,
+    message: `잭팟 🪙${(r?.pool ?? 0).toLocaleString()}을 하위 ${
+      r?.recipients ?? 0
+    }명에게 분배했습니다.`,
+  };
+}
+
+// 도박 하우스세 on/off·세율 조정 (재배포 없이 실시간)
+export async function setHouseTax(
+  on: boolean,
+  base: number,
+  rich: number
+): Promise<ActionResult> {
+  if (!Number.isFinite(base) || !Number.isFinite(rich)) {
+    return { ok: false, message: "세율을 올바르게 입력하세요." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_house_tax", {
+    p_on: on,
+    p_base: base,
+    p_rich: rich,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    message: on
+      ? `하우스세 ON (기본 ${Math.round(base * 100)}% · 부자 +${Math.round(
+          rich * 100
+        )}%)`
+      : "하우스세 OFF",
+  };
+}
+
 // ---------- 미니게임 (팟배팅) 운영 ----------
 
 // 팟배팅 게임 생성 (draft 상태). option_source='custom'이면 옵션을 함께 넣는다.

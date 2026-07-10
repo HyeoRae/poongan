@@ -27,6 +27,7 @@ export default async function DashboardPage() {
     { data: totals },
     { data: myRole },
     { data: picksRaw },
+    { data: jackpotRow },
   ] = await Promise.all([
     supabase.rpc("list_public_profiles"),
     supabase.from("teams").select("*").order("id"),
@@ -42,6 +43,7 @@ export default async function DashboardPage() {
       .from("penalty_picks")
       .select("*")
       .order("created_at", { ascending: false }),
+    supabase.from("jackpot_pool").select("amount").eq("id", 1).maybeSingle(),
   ]);
 
   const role = myRole as PlayerRole | null;
@@ -89,6 +91,7 @@ export default async function DashboardPage() {
         initialProfiles={roster}
         teams={(teams as Team[]) ?? []}
         initialTotals={(totals as TeamTotal[]) ?? []}
+        initialJackpot={(jackpotRow as { amount: number } | null)?.amount ?? 0}
       />
       <PenaltyHistoryCard picks={penaltyPicks} />
       <EnableNotifications />

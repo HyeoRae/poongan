@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useMulligan, peekRole, ledgerPeek } from "@/app/(app)/card/actions";
+import {
+  useMulligan,
+  peekRole,
+  ledgerPeek,
+  useTaxAudit,
+} from "@/app/(app)/card/actions";
 import type { PlayerEffectCard, PlayerStats } from "@/lib/types";
 import Spinner from "@/components/Spinner";
 
@@ -28,6 +33,7 @@ export default function MyEffectCards({
   const [msg, setMsg] = useState<string | null>(null);
   const [peekTarget, setPeekTarget] = useState("");
   const [ledgerTarget, setLedgerTarget] = useState("");
+  const [auditTarget, setAuditTarget] = useState("");
   const [stats, setStats] = useState<PlayerStats | null>(null);
 
   const passives = cards.filter((c) => c.preset?.grade === "passive" && !c.used_at);
@@ -158,6 +164,29 @@ export default function MyEffectCards({
                       className="rounded-lg bg-gold px-3 py-1.5 text-xs font-bold text-black disabled:opacity-50"
                     >
                       열람
+                    </button>
+                  </div>
+                )}
+                {key === "tax_audit" && (
+                  <div className="mt-2 flex gap-2">
+                    <select
+                      value={auditTarget}
+                      onChange={(e) => setAuditTarget(e.target.value)}
+                      className="flex-1 rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none"
+                    >
+                      <option value="">대상 선택</option>
+                      {targets.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={pending || !auditTarget}
+                      onClick={() => run(() => useTaxAudit(auditTarget))}
+                      className="rounded-lg bg-gold px-3 py-1.5 text-xs font-bold text-black disabled:opacity-50"
+                    >
+                      징수
                     </button>
                   </div>
                 )}

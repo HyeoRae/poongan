@@ -48,6 +48,25 @@ export async function peekRole(
   return { ok: true, message: `엿본 결과: ${label}`, role };
 }
 
+// 세무조사: 대상(부자) 1명 잔액의 10%를 공동 잭팟풀로 징수
+export async function useTaxAudit(
+  targetId: string
+): Promise<{ ok: boolean; message: string }> {
+  if (!targetId) return { ok: false, message: "대상을 선택하세요." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("use_tax_audit", {
+    p_target: targetId,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/card");
+  revalidatePath("/dashboard");
+  const amount = (data as { amount?: number })?.amount ?? 0;
+  return {
+    ok: true,
+    message: `세무조사 완료! ${amount.toLocaleString()} 토큰을 잭팟풀로 징수했어요.`,
+  };
+}
+
 // 흥신소: 대상의 누적 전적 열람
 export async function ledgerPeek(
   targetId: string

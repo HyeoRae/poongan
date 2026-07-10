@@ -11,6 +11,7 @@
  *   [10]   ★ 풀 정산 — 팟 보존(토큰 총량 불변) + 파리뮤추얼 배당
  *   [11]   ★ 잔액 == 거래원장 합 불변식(전원, _apply_gold 정합성)
  *   [12]   ★ admin_grant 만큼 총 공급량 정확히 증가
+ *   [13]   ★ 도박 하우스세 parity(HOUSE_TAX_BASE) + 세무조사 + 잭팟 재분배 총량 보존
  *   미검증: 섯다 팟 정산, 동시성/경쟁조건 (TODO)
  *
  * parity 가드: SQL RPC 의 밸런스 값이 lib/constants.ts 상수와 어긋나면 [2][5][7] 이 FAIL 한다.
@@ -35,6 +36,9 @@ import {
   GACHA_FREE,
   GACHA_BASE,
   GACHA_STEP,
+  HOUSE_TAX_BASE,
+  HOUSE_TAX_RICH,
+  TAX_AUDIT_PCT,
 } from "../lib/constants";
 
 config({ path: ".env.local" });
@@ -368,6 +372,94 @@ async function main() {
   const supply0 = Number(g0?.[0]?.total_supply ?? 0);
   const supply1 = Number(g1?.[0]?.total_supply ?? 0);
   check("admin_grant 만큼 총공급 증가", supply1 - supply0 === GRANT, `(Δ${supply1 - supply0})`);
+
+  // 13) 도박 하우스세 + 잭팟 재분배 (빈부격차 완화)
+  //     세율을 (base, rich=0) 로 고정해 부(富)구간과 무관하게 결정론적으로 검증.
+  //     test10 은 효과카드 미보유(부스트 없음) → 순이익=베팅액.
+  console.log("\n[13] 하우스세 · 잭팟 재분배");
+  await adminC.rpc("set_house_tax", { p_on: true, p_base: HOUSE_TAX_BASE, p_rich: 0 });
+  const BET = 1000;
+  const expTax = Math.floor(BET * HOUSE_TAX_BASE); // 순이익(=베팅액)의 base%
+  const expNet = BET - expTax; // 세후 순이익
+  const poolBefore = Number(
+    (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+  );
+  const t10 = await signIn("test10");
+  // 이길 때까지 동전 던지기(항상 front)
+  let won13 = false;
+  let net13 = 0;
+  for (let i = 0; i < 60 && !won13; i++) {
+    const bBet = await balance(uids.test10);
+    const { data } = await t10.rpc("gamble_coinflip", { p_bet: BET, p_choice: "front" });
+    if (data && (data as { win: boolean }).win === true) {
+      won13 = true;
+      net13 = (await balance(uids.test10)) - bBet; // 세후 순이익
+    }
+  }
+  if (won13) {
+    check(`하우스세 parity: 세후 순이익 +${expNet}`, net13 === expNet, `(${net13}, 기대 ${expNet})`);
+    const poolAfterWin = Number(
+      (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+    );
+    check(
+      `하우스세: 세금 ${expTax}이 잭팟풀 적립`,
+      poolAfterWin - poolBefore === expTax,
+      `(Δ${poolAfterWin - poolBefore}, 기대 ${expTax})`
+    );
+  } else {
+    console.log("  (60판 내 승리 없음 — 하우스세 parity 스킵)");
+  }
+
+  // 세무조사: 대상 잔액의 TAX_AUDIT_PCT 를 잭팟풀로 징수
+  await adminC.rpc("admin_grant_card", { p_user: uids.test10, p_key: "tax_audit" });
+  const t1bal = await balance(uids.test1);
+  const expAudit = Math.floor(t1bal * TAX_AUDIT_PCT);
+  const poolBeforeAudit = Number(
+    (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+  );
+  const { error: auditErr } = await t10.rpc("use_tax_audit", { p_target: uids.test1 });
+  check("세무조사 실행", !auditErr, auditErr?.message ?? "");
+  const t1after = await balance(uids.test1);
+  const poolAfterAudit = Number(
+    (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+  );
+  check(
+    `세무조사: 대상 -${expAudit} · 잭팟풀 +${expAudit}`,
+    t1bal - t1after === expAudit && poolAfterAudit - poolBeforeAudit === expAudit,
+    `(대상Δ${t1bal - t1after}, 풀Δ${poolAfterAudit - poolBeforeAudit}, 기대 ${expAudit})`
+  );
+  const { error: auditErr2 } = await t10.rpc("use_tax_audit", { p_target: uids.test1 });
+  check("세무조사: 카드 소진 후 재사용 불가", !!auditErr2);
+
+  // 로빈훗 분배: 잭팟풀 전액이 하위 절반에게 → 총량 보존(풀=총공급 증가분), 풀=0
+  const { data: gs0 } = await adminC.rpc("get_global_stats");
+  const poolToDist = Number(
+    (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+  );
+  if (poolToDist > 0) {
+    const { data: dist, error: distErr } = await adminC.rpc("distribute_jackpot");
+    check("잭팟 분배 성공", !distErr, distErr?.message ?? "");
+    const poolAfterDist = Number(
+      (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+    );
+    const { data: gs1 } = await adminC.rpc("get_global_stats");
+    const supplyDelta = Number(gs1?.[0]?.total_supply ?? 0) - Number(gs0?.[0]?.total_supply ?? 0);
+    check("잭팟 분배 후 풀=0", poolAfterDist === 0, `(${poolAfterDist})`);
+    check(
+      "잭팟 분배: 총량 보존(공급증가=분배액)",
+      supplyDelta === poolToDist,
+      `(Δ${supplyDelta}, 풀 ${poolToDist})`
+    );
+    check("잭팟 분배: 반환 pool 일치", Number(dist?.pool) === poolToDist, JSON.stringify(dist));
+  } else {
+    console.log("  (잭팟풀이 비어 분배 스킵)");
+  }
+  // 하우스세 기본값 복원(테스트가 남기는 상태 정리)
+  await adminC.rpc("set_house_tax", {
+    p_on: true,
+    p_base: HOUSE_TAX_BASE,
+    p_rich: HOUSE_TAX_RICH,
+  });
   // TODO(후속): 섯다 팟 정산 정확성, 병렬 송금/동시 도박 등 동시성·경쟁조건 커버리지는 미검증.
 
   console.log(`\n== 결과: ${pass} PASS / ${fail} FAIL ==`);
