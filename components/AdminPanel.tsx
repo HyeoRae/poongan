@@ -12,6 +12,7 @@ import {
   openEventLobby,
   distributeJackpot,
   setHouseTax,
+  redenominate,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import { resetPenaltyPicks } from "@/app/(app)/admin/penaltyActions";
@@ -82,6 +83,9 @@ export default function AdminPanel({
   // 도박 하우스세 세율(%) 입력 — 서버 값(소수)을 % 로 표시
   const [taxBase, setTaxBase] = useState(String(Math.round(houseTaxBase * 100)));
   const [taxRich, setTaxRich] = useState(String(Math.round(houseTaxRich * 100)));
+
+  // 화폐개혁 나눔 비율(잔액 1/N)
+  const [redenomDiv, setRedenomDiv] = useState("100");
 
   const assigned = players.filter((p) => p.team_id !== null).length;
   const pickedIds = new Set(penaltyPicks.map((p) => p.user_id));
@@ -350,6 +354,49 @@ export default function AdminPanel({
               className="flex-1 rounded-xl border border-border py-2.5 text-sm font-bold text-white/70 disabled:opacity-50"
             >
               하우스세 OFF
+            </button>
+          </div>
+        </div>
+
+        {/* 화폐개혁(디노미네이션) — 전 계정 잔액 1/N 축소 + 차액 소각 */}
+        <div className="mt-3 rounded-xl border border-red-500/40 bg-red-500/5 p-3">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-sm font-bold">💥 화폐개혁</span>
+            <span className="text-[11px] text-white/40">되돌릴 수 없음</span>
+          </div>
+          <p className="mb-2 text-xs text-white/50">
+            전 계정 잔액을 <b>1/N</b>로 내림하고 차액을 <b>소각</b>합니다. 잔액 비율(팀
+            순위·격차)은 그대로, 자릿수만 줄여 인플레를 즉시 정리합니다. 잭팟풀도 함께 축소.
+          </p>
+          <div className="flex gap-2">
+            <label className="flex items-center gap-1 rounded-xl border border-border bg-background px-3 py-2 text-sm">
+              1/
+              <input
+                className="w-20 bg-transparent tabular-nums outline-none"
+                type="number"
+                min={2}
+                value={redenomDiv}
+                onChange={(e) => setRedenomDiv(e.target.value)}
+              />
+            </label>
+            <button
+              disabled={pending}
+              onClick={() => {
+                const n = Number(redenomDiv);
+                if (!Number.isInteger(n) || n < 2) {
+                  setMsg("나눔 비율은 2 이상의 정수여야 합니다. (예: 100)");
+                  return;
+                }
+                if (
+                  confirm(
+                    `전 계정 잔액을 1/${n}로 축소하고 차액을 소각합니다.\n되돌릴 수 없습니다. 진행할까요?`
+                  )
+                )
+                  run(() => redenominate(n));
+              }}
+              className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-black text-white disabled:opacity-50"
+            >
+              화폐개혁 단행
             </button>
           </div>
         </div>

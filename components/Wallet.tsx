@@ -18,6 +18,8 @@ const TX_LABEL: Record<string, string> = {
   shop: "상점",
   fee: "송금 수수료",
   gacha: "효과카드 뽑기",
+  jackpot: "잭팟 재분배",
+  redenom: "화폐개혁",
 };
 
 // 거래내역 리스트 (내 지갑 / 관리자 타임라인 공용)
