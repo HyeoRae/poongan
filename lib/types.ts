@@ -355,6 +355,7 @@ export type SutdaPlayer = {
   revealed_card2: number | null;
   revealed_rank: number | null;
   revealed_label: string | null;
+  last_action: string | null;
   joined_at: string;
   // 조인해서 채우는 표시용
   display_name?: string;
