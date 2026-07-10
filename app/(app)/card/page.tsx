@@ -2,7 +2,7 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import EffectCardGacha from "@/components/EffectCardGacha";
 import MyEffectCards from "@/components/MyEffectCards";
-import { GACHA_BASE, GACHA_STEP } from "@/lib/constants";
+import { GACHA_BASE, GACHA_MULT } from "@/lib/constants";
 import type {
   EffectCardPreset,
   PlayerEffectCard,
@@ -39,7 +39,7 @@ export default async function CardPage() {
       paid_count: 0,
     };
   const nextCost =
-    gacha.free_left > 0 ? 0 : GACHA_BASE + GACHA_STEP * gacha.paid_count;
+    gacha.free_left > 0 ? 0 : GACHA_BASE * Math.pow(GACHA_MULT, gacha.paid_count);
 
   // 관심법/흥신소 대상 목록 (본인·관리자·봇 제외)
   const targets = ((roster as PublicProfile[]) ?? []).filter(

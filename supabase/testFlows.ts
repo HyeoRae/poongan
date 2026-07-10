@@ -36,7 +36,7 @@ import {
   TRANSFER_FEE_HALF_PCT,
   GACHA_FREE,
   GACHA_BASE,
-  GACHA_STEP,
+  GACHA_MULT,
   HOUSE_TAX_BASE,
   HOUSE_TAX_RICH,
   TAX_AUDIT_PCT,
@@ -215,10 +215,10 @@ async function main() {
     `무료 ${GACHA_FREE}연차`,
     draws.slice(0, GACHA_FREE).every((d) => d.was_free) && draws[GACHA_FREE] && !draws[GACHA_FREE].was_free
   );
-  const expCost0 = GACHA_BASE; // 첫 유료(paid_count=0)
-  const expCost1 = GACHA_BASE + GACHA_STEP; // 둘째 유료(paid_count=1)
+  const expCost0 = GACHA_BASE; // 첫 유료(paid_count=0) = BASE
+  const expCost1 = GACHA_BASE * GACHA_MULT; // 둘째 유료(paid_count=1) = BASE*MULT (2배 점증)
   check(
-    `유료 비용 점증(${expCost0},${expCost1})`,
+    `유료 비용 2배 점증(${expCost0},${expCost1})`,
     draws[GACHA_FREE]?.cost === expCost0 && draws[GACHA_FREE + 1]?.cost === expCost1,
     `(${draws[GACHA_FREE]?.cost},${draws[GACHA_FREE + 1]?.cost})`
   );
