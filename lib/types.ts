@@ -153,6 +153,13 @@ export type JackpotPool = {
   updated_at: string;
 };
 
+// 카지노 뱅크(casino_bank 싱글턴) — 베팅 적립·당첨금 지급 재원. 배당은 이 잔고 상한 내에서만.
+export type CasinoBank = {
+  id: number;
+  balance: number;
+  updated_at: string;
+};
+
 // ---------- 🛎️ 공용 이벤트 대기실 (실시간 접속 현황) ----------
 export type EventLobbyStatus = "closed" | "open";
 

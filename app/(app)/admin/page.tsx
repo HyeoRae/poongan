@@ -17,7 +17,7 @@ export default async function AdminPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: players }, { data: grantTargetsRaw }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }, { data: picksRaw }, { data: jackpotRow }] =
+  const [{ data: players }, { data: grantTargetsRaw }, { data: teams }, { data: settings }, { data: gamesRaw }, { data: schedRaw }, { data: picksRaw }, { data: jackpotRow }, { data: bankRow }] =
     await Promise.all([
       supabase
         .from("profiles")
@@ -52,6 +52,7 @@ export default async function AdminPage() {
         .select("*")
         .order("created_at", { ascending: false }),
       supabase.from("jackpot_pool").select("amount").eq("id", 1).maybeSingle(),
+      supabase.from("casino_bank").select("balance").eq("id", 1).maybeSingle(),
     ]);
 
   const games = (gamesRaw as Game[]) ?? [];
@@ -115,6 +116,7 @@ export default async function AdminPage() {
       schedule={schedule}
       penaltyPicks={penaltyPicks}
       jackpot={(jackpotRow as { amount: number } | null)?.amount ?? 0}
+      casinoBank={(bankRow as { balance: number } | null)?.balance ?? 0}
       houseTaxOn={settings?.house_tax_on ?? true}
       houseTaxBase={settings?.house_tax_base ?? 0.1}
       houseTaxRich={settings?.house_tax_rich ?? 0.15}

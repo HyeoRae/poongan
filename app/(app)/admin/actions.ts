@@ -225,6 +225,23 @@ export async function distributeJackpot(): Promise<ActionResult> {
   };
 }
 
+// 🏦 카지노 뱅크 자금 조정 (양수=투입, 음수=회수). 뱅크는 플레이어 공급량이 아니라 인플레 무관.
+export async function fundCasinoBank(amount: number): Promise<ActionResult> {
+  if (!Number.isInteger(amount) || amount === 0) {
+    return { ok: false, message: "0이 아닌 정수를 입력하세요." };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("adjust_casino_bank", {
+    p_amount: amount,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  return {
+    ok: true,
+    message: `카지노 뱅크 잔고: 🪙${Number(data ?? 0).toLocaleString()}`,
+  };
+}
+
 // 도박 하우스세 on/off·세율 조정 (재배포 없이 실시간)
 export async function setHouseTax(
   on: boolean,

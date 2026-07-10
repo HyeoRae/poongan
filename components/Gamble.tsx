@@ -5,9 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { playCoinflip, playDice, playRoulette } from "@/app/(app)/gamble/actions";
 import GambleReveal, { type RevealData } from "@/components/gamble/GambleReveal";
+import { useCasinoBank } from "@/lib/hooks";
 
-export default function Gamble({ initialGold }: { initialGold: number }) {
+export default function Gamble({
+  initialGold,
+  initialBank = 0,
+}: {
+  initialGold: number;
+  initialBank?: number;
+}) {
   const router = useRouter();
+  const bank = useCasinoBank(initialBank);
   const [pending, startTransition] = useTransition();
   const [bet, setBet] = useState("");
   const [log, setLog] = useState<string | null>(null);
@@ -130,6 +138,14 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
     <div className="space-y-6">
       <h1 className="text-xl font-black">🎰 풍산 카지노</h1>
       <p className="text-xs text-white/50">베팅액을 정하고 게임을 선택하세요.</p>
+
+      {/* 🏦 카지노 뱅크 — 당첨금은 이 잔고에서만 지급된다(잔고 초과 시 상한). */}
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
+        <span className="text-white/60">🏦 카지노 잔고</span>
+        <span className="font-black tabular-nums text-gold">
+          🪙 {bank.toLocaleString()}
+        </span>
+      </div>
 
       {/* 섯다 입장 */}
       <Link

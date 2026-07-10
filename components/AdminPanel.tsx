@@ -12,6 +12,7 @@ import {
   openEventLobby,
   distributeJackpot,
   setHouseTax,
+  fundCasinoBank,
 } from "@/app/(app)/admin/actions";
 import { broadcastNotification } from "@/app/(app)/push/actions";
 import { resetPenaltyPicks } from "@/app/(app)/admin/penaltyActions";
@@ -29,6 +30,7 @@ export default function AdminPanel({
   schedule,
   penaltyPicks,
   jackpot,
+  casinoBank,
   houseTaxOn,
   houseTaxBase,
   houseTaxRich,
@@ -41,6 +43,7 @@ export default function AdminPanel({
   schedule: { id: number; day: number; title: string }[];
   penaltyPicks: PenaltyPick[];
   jackpot: number;
+  casinoBank: number;
   houseTaxOn: boolean;
   houseTaxBase: number;
   houseTaxRich: number;
@@ -82,6 +85,9 @@ export default function AdminPanel({
   // 도박 하우스세 세율(%) 입력 — 서버 값(소수)을 % 로 표시
   const [taxBase, setTaxBase] = useState(String(Math.round(houseTaxBase * 100)));
   const [taxRich, setTaxRich] = useState(String(Math.round(houseTaxRich * 100)));
+
+  // 카지노 뱅크 투입/회수 금액
+  const [bankFund, setBankFund] = useState("");
 
   const assigned = players.filter((p) => p.team_id !== null).length;
   const pickedIds = new Set(penaltyPicks.map((p) => p.user_id));
@@ -304,6 +310,43 @@ export default function AdminPanel({
           >
             💸 로빈훗 분배 (하위 절반에게)
           </button>
+        </div>
+
+        {/* 🏦 카지노 뱅크 — 도박 배당 재원(잔고 상한). 인플레 구조적 차단 */}
+        <div className="mb-3 rounded-xl border border-border bg-background/50 p-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-white/60">🏦 카지노 뱅크</span>
+            <span className="font-black tabular-nums text-gold">
+              🪙 {casinoBank.toLocaleString()}
+            </span>
+          </div>
+          <p className="mt-1 text-[11px] text-white/40">
+            베팅이 쌓이고 당첨금이 여기서 나갑니다. 잔고가 배당 상한이라 도박이
+            토큰을 새로 찍어낼 수 없어요. 초반엔 여유 자금을 넣어두면 큰 배당도 매끄럽게
+            지급됩니다. (뱅크는 개인 잔액이 아니라 인플레와 무관)
+          </p>
+          <div className="mt-2 flex gap-2">
+            <input
+              type="number"
+              value={bankFund}
+              onChange={(e) => setBankFund(e.target.value)}
+              placeholder="투입(+)/회수(-) 금액"
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
+            />
+            <button
+              disabled={pending || !bankFund}
+              onClick={() =>
+                run(async () => {
+                  const r = await fundCasinoBank(Number(bankFund));
+                  if (r.ok) setBankFund("");
+                  return r;
+                })
+              }
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
+            >
+              적용
+            </button>
+          </div>
         </div>
 
         {/* 하우스세 세율 조정 */}

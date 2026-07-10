@@ -12,6 +12,7 @@
  *   [11]   ★ 잔액 == 거래원장 합 불변식(전원, _apply_gold 정합성)
  *   [12]   ★ admin_grant 만큼 총 공급량 정확히 증가
  *   [13]   ★ 도박 하우스세 parity(HOUSE_TAX_BASE) + 세무조사 + 잭팟 재분배 총량 보존
+ *   [14]   ★ 카지노 뱅크롤 — 도박 총량 보존(Σ플레이어+뱅크+잭팟풀 불변, 발행 없음)
  *   미검증: 섯다 팟 정산, 동시성/경쟁조건 (TODO)
  *
  * parity 가드: SQL RPC 의 밸런스 값이 lib/constants.ts 상수와 어긋나면 [2][5][7] 이 FAIL 한다.
@@ -378,6 +379,8 @@ async function main() {
   //     test10 은 효과카드 미보유(부스트 없음) → 순이익=베팅액.
   console.log("\n[13] 하우스세 · 잭팟 재분배");
   await adminC.rpc("set_house_tax", { p_on: true, p_base: HOUSE_TAX_BASE, p_rich: 0 });
+  // 뱅크롤 도입(0033): 당첨금은 카지노 뱅크에서 지급되므로, 상한에 걸리지 않게 넉넉히 투입.
+  await adminC.rpc("adjust_casino_bank", { p_amount: 10_000_000 });
   const BET = 1000;
   const expTax = Math.floor(BET * HOUSE_TAX_BASE); // 순이익(=베팅액)의 base%
   const expNet = BET - expTax; // 세후 순이익
@@ -454,6 +457,30 @@ async function main() {
   } else {
     console.log("  (잭팟풀이 비어 분배 스킵)");
   }
+  // 14) 카지노 뱅크롤 총량 보존 — 도박이 토큰을 새로 발행하지 않는다.
+  //     불변식: Σ(플레이어 잔액) + 카지노 뱅크 + 잭팟풀 = 도박 전후 동일.
+  console.log("\n[14] 뱅크롤 총량 보존(발행 없음)");
+  const totalAll = async (): Promise<number> => {
+    const { data: profs } = await admin
+      .from("profiles")
+      .select("gold_balance")
+      .eq("role", "player");
+    const pSum = (profs ?? []).reduce((s, r) => s + (r.gold_balance as number), 0);
+    const bank = Number(
+      (await admin.from("casino_bank").select("balance").eq("id", 1).single()).data?.balance ?? 0
+    );
+    const pool = Number(
+      (await admin.from("jackpot_pool").select("amount").eq("id", 1).single()).data?.amount ?? 0
+    );
+    return pSum + bank + pool;
+  };
+  const S0 = await totalAll();
+  for (let i = 0; i < 20; i++) {
+    await t10.rpc("gamble_roulette", { p_bet: 500, p_choice: String((i % 10) + 1) });
+  }
+  const S1 = await totalAll();
+  check("도박 20판 후 총량 불변(Σ플레이어+뱅크+잭팟풀)", S0 === S1, `(S0=${S0}, S1=${S1})`);
+
   // 하우스세 기본값 복원(테스트가 남기는 상태 정리)
   await adminC.rpc("set_house_tax", {
     p_on: true,

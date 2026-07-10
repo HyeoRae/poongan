@@ -14,6 +14,7 @@ import type {
   QuizState,
   QuizScore,
   JackpotPool,
+  CasinoBank,
 } from "@/lib/types";
 
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
@@ -186,6 +187,38 @@ export function useJackpotPool(initial: number) {
   }, []);
 
   return amount;
+}
+
+// 🏦 카지노 뱅크(casino_bank id=1) 실시간 구독 — 도박장/관리자 표시.
+// 베팅으로 늘고 당첨금 지급으로 준다. 잔고가 배당 상한이므로 플레이어가 체감할 수 있게 노출.
+export function useCasinoBank(initial: number) {
+  const [balance, setBalance] = useState(initial);
+
+  useEffect(() => {
+    setBalance(initial);
+  }, [initial]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("casino-bank")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "casino_bank", filter: "id=eq.1" },
+        (payload) => {
+          if (payload.eventType !== "DELETE") {
+            setBalance((payload.new as CasinoBank).balance);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return balance;
 }
 
 // 내 효과카드 보유 변동 실시간 — player_effect_cards 변경 시 onChange(보통 router.refresh).
