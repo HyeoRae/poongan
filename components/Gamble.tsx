@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { playCoinflip, playDice, playRoulette } from "@/app/(app)/gamble/actions";
-import Spinner from "@/components/Spinner";
+import GambleReveal, { type RevealData } from "@/components/gamble/GambleReveal";
 
 export default function Gamble({ initialGold }: { initialGold: number }) {
   const router = useRouter();
@@ -12,48 +12,119 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
   const [bet, setBet] = useState("");
   const [log, setLog] = useState<string | null>(null);
   const [flash, setFlash] = useState<"win" | "lose" | null>(null);
-  const [active, setActive] = useState<string | null>(null);
+  const [reveal, setReveal] = useState<RevealData | null>(null);
+  const [muted, setMuted] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("poongan:gamble-muted") === "1"
+  );
 
-  function done(win: boolean | undefined, text: string) {
-    setLog(text);
-    setFlash(win ? "win" : "lose");
-    setActive(null);
+  // 베팅액 검증(오버레이 헛깜빡임 방지). 유효하면 정수, 아니면 null.
+  function validBet(): number | null {
+    const n = Number(bet);
+    if (!Number.isInteger(n) || n <= 0) {
+      setLog("베팅액을 입력하세요.");
+      setFlash("lose");
+      return null;
+    }
+    return n;
+  }
+
+  function toggleMute() {
+    setMuted((m) => {
+      const v = !m;
+      try {
+        localStorage.setItem("poongan:gamble-muted", v ? "1" : "0");
+      } catch {
+        /* 무시 */
+      }
+      return v;
+    });
+  }
+
+  // 오버레이가 착지·리빌을 끝내면 호출 — 히스토리 라인 확정 + 잔액 갱신.
+  // onDone 은 doneRef 로 항상 최신 클로저가 불리므로 reveal 은 result 반영 상태다.
+  function finishReveal() {
+    if (reveal?.result) {
+      setLog(reveal.result.text);
+      setFlash(reveal.result.win ? "win" : "lose");
+    }
+    setReveal(null);
     router.refresh();
   }
 
   function coin(choice: "front" | "back") {
+    const n = validBet();
+    if (n === null) return;
     setLog(null);
-    setActive(`coin-${choice}`);
+    setReveal({
+      game: "coin",
+      bet: n,
+      choice,
+      label: choice === "front" ? "앞면" : "뒷면",
+      result: null,
+    });
     startTransition(async () => {
-      const r = await playCoinflip(Number(bet), choice);
-      if (!r.ok) return done(undefined, r.message ?? "오류");
+      const r = await playCoinflip(n, choice);
+      if (!r.ok) {
+        setReveal(null);
+        setLog(r.message ?? "오류");
+        setFlash("lose");
+        return;
+      }
       const face = r.outcome === "front" ? "앞면" : "뒷면";
-      done(r.win, `🪙 결과: ${face} → ${r.win ? "🎉 당첨!" : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`);
+      const text = `🪙 결과: ${face} → ${r.win ? "🎉 당첨!" : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`;
+      setReveal((rv) =>
+        rv
+          ? { ...rv, result: { win: !!r.win, balance: r.balance ?? 0, outcome: r.outcome, mult: 2, text } }
+          : rv
+      );
     });
   }
 
   function dice(guess: number) {
+    const n = validBet();
+    if (n === null) return;
     setLog(null);
-    setActive(`dice-${guess}`);
+    setReveal({ game: "dice", bet: n, choice: String(guess), label: String(guess), result: null });
     startTransition(async () => {
-      const r = await playDice(Number(bet), guess);
-      if (!r.ok) return done(undefined, r.message ?? "오류");
-      done(r.win, `🎲 결과: ${r.roll} → ${r.win ? "🎉 6배 당첨!" : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`);
+      const r = await playDice(n, guess);
+      if (!r.ok) {
+        setReveal(null);
+        setLog(r.message ?? "오류");
+        setFlash("lose");
+        return;
+      }
+      const text = `🎲 결과: ${r.roll} → ${r.win ? "🎉 6배 당첨!" : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`;
+      setReveal((rv) =>
+        rv ? { ...rv, result: { win: !!r.win, balance: r.balance ?? 0, roll: r.roll, mult: 6, text } } : rv
+      );
     });
   }
 
   function roulette(choice: string, labelOf: string) {
+    const n = validBet();
+    if (n === null) return;
     setLog(null);
-    setActive(`roul-${choice}`);
+    setReveal({ game: "roulette", bet: n, choice, label: labelOf, result: null });
     startTransition(async () => {
-      const r = await playRoulette(Number(bet), choice);
-      if (!r.ok) return done(undefined, r.message ?? "오류");
-      done(
-        r.win,
-        `🎡 결과: ${r.roll} (${labelOf}) → ${r.win ? `🎉 ${r.mult}배 당첨!` : "💸 꽝"} (잔액 ${r.balance?.toLocaleString()})`
+      const r = await playRoulette(n, choice);
+      if (!r.ok) {
+        setReveal(null);
+        setLog(r.message ?? "오류");
+        setFlash("lose");
+        return;
+      }
+      const text = `🎡 결과: ${r.roll} (${labelOf}) → ${
+        r.win ? `🎉 ${r.mult}배 당첨!` : "💸 꽝"
+      } (잔액 ${r.balance?.toLocaleString()})`;
+      setReveal((rv) =>
+        rv
+          ? { ...rv, result: { win: !!r.win, balance: r.balance ?? 0, roll: r.roll, mult: r.mult ?? 2, text } }
+          : rv
       );
     });
   }
+
+  const busy = pending || reveal !== null;
 
   return (
     <div className="space-y-6">
@@ -101,19 +172,17 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
         <p className="mb-3 text-xs text-white/50">적중 시 2배 (50%)</p>
         <div className="grid grid-cols-2 gap-2">
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => coin("front")}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
+            className="rounded-xl bg-gold py-3 font-bold text-black disabled:opacity-50"
           >
-            {active === "coin-front" && <Spinner />}
             앞면
           </button>
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => coin("back")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-3 font-bold text-gold disabled:opacity-50"
+            className="rounded-xl border border-gold py-3 font-bold text-gold disabled:opacity-50"
           >
-            {active === "coin-back" && <Spinner />}
             뒷면
           </button>
         </div>
@@ -127,11 +196,10 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <button
               key={n}
-              disabled={pending}
+              disabled={busy}
               onClick={() => dice(n)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-lg font-bold disabled:opacity-50 hover:border-gold"
+              className="rounded-xl border border-border py-3 text-lg font-bold disabled:opacity-50 hover:border-gold"
             >
-              {active === `dice-${n}` && <Spinner />}
               {n}
             </button>
           ))}
@@ -146,35 +214,31 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
         </p>
         <div className="mb-2 grid grid-cols-2 gap-2">
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => roulette("low", "1-5")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
-            {active === "roul-low" && <Spinner />}
             언더 1-5 (2배)
           </button>
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => roulette("high", "6-10")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
-            {active === "roul-high" && <Spinner />}
             오버 6-10 (2배)
           </button>
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => roulette("odd", "홀")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
-            {active === "roul-odd" && <Spinner />}
             홀 (2배)
           </button>
           <button
-            disabled={pending}
+            disabled={busy}
             onClick={() => roulette("even", "짝")}
-            className="flex items-center justify-center gap-2 rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
+            className="rounded-xl border border-gold py-2.5 text-sm font-bold text-gold disabled:opacity-50"
           >
-            {active === "roul-even" && <Spinner />}
             짝 (2배)
           </button>
         </div>
@@ -183,11 +247,10 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
             <button
               key={n}
-              disabled={pending}
+              disabled={busy}
               onClick={() => roulette(String(n), String(n))}
-              className="flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 font-bold disabled:opacity-50 hover:border-gold"
+              className="rounded-xl border border-border py-2.5 font-bold disabled:opacity-50 hover:border-gold"
             >
-              {active === `roul-${n}` && <Spinner />}
               {n}
             </button>
           ))}
@@ -197,6 +260,10 @@ export default function Gamble({ initialGold }: { initialGold: number }) {
       <p className="text-center text-[11px] text-white/30">
         도박은 재미로! 풍산토큰는 잃을 수 있습니다 😈
       </p>
+
+      {reveal && (
+        <GambleReveal data={reveal} muted={muted} onToggleMute={toggleMute} onDone={finishReveal} />
+      )}
     </div>
   );
 }
