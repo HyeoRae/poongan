@@ -30,10 +30,10 @@ export const TRANSFER_FEE_PCT = 0.2;
 // 큰손(fee_half) 카드 발동 시 절반 수수료(10%). 0016 transfer_gold 의 v_rate(0.10) 와 값 일치.
 export const TRANSFER_FEE_HALF_PCT = 0.1;
 
-// ---------- 효과카드 가챠 상수 (0027 draw_effect_card 와 값 일치) ----------
+// ---------- 효과카드 가챠 상수 (0033 draw_effect_card 와 값 일치) ----------
 export const GACHA_FREE = 3; // 초기 무료 뽑기 횟수
 export const GACHA_BASE = 200; // 유료 첫 뽑기 비용 (카드 영향력↑ → 비싸게)
-export const GACHA_STEP = 50; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
+export const GACHA_STEP = 100; // 뽑을수록 증가폭 (cost = BASE + STEP * paid_count)
 
 // ---------- 도박 하우스세 / 재분배 (0032_gambling_rebalance.sql 와 값 일치) ----------
 // 도박 당첨금의 "순이익"에서 떼는 누진 세율 → 공동 잭팟풀에 적립.
