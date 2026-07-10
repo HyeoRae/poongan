@@ -6,8 +6,10 @@ import {
   stealGold,
   hackerScan,
   leaderBalances,
+  leaderTeamTransactions,
   leaderRenameTeam,
   type Bal,
+  type LeaderTx,
 } from "@/app/(app)/dashboard/roleActions";
 import type { PlayerRoleKind } from "@/lib/types";
 import Spinner from "@/components/Spinner";
@@ -20,9 +22,62 @@ function fmt(ms: number) {
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
+// 거래 종류 한글 라벨 (Wallet.tsx 와 동일 매핑)
+const TX_LABEL: Record<string, string> = {
+  admin_grant: "관리자 지급",
+  game: "게임",
+  gamble: "도박",
+  transfer: "송금",
+  steal: "강탈",
+  shop: "상점",
+  fee: "송금 수수료",
+  gacha: "효과카드 뽑기",
+};
+
+// 팀원 거래내역 리스트 — 각 항목에 "어떤 팀원" 것인지 이름을 표시한다.
+function TeamTxList({ rows }: { rows: LeaderTx[] }) {
+  if (rows.length === 0) {
+    return <p className="mt-2 text-xs text-white/40">아직 팀원 거래내역이 없습니다.</p>;
+  }
+  return (
+    <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
+      {rows.map((t) => (
+        <li
+          key={t.id}
+          className="flex items-center justify-between rounded-lg border border-border bg-background/50 px-3 py-1.5"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-gold">{t.name}</p>
+            <p className="text-xs text-white/70">
+              {TX_LABEL[t.type] ?? t.type}
+              {t.reason ? ` · ${t.reason}` : ""}
+            </p>
+            <p className="text-[10px] text-white/30">
+              {new Date(t.created_at).toLocaleString("ko-KR", {
+                month: "numeric",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          </div>
+          <span
+            className={`ml-2 shrink-0 font-bold tabular-nums ${
+              t.amount >= 0 ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            {t.amount >= 0 ? "+" : ""}
+            {t.amount.toLocaleString()}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function BalanceList({ rows }: { rows: Bal[] }) {
   return (
-    <ul className="mt-2 space-y-1">
+    <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto overscroll-contain pr-1">
       {rows.map((r, i) => (
         <li
           key={r.uid}
@@ -65,6 +120,7 @@ export default function RoleAbilityPanel({
   // 팀장
   const [newName, setNewName] = useState("");
   const [teamBalances, setTeamBalances] = useState<Bal[] | null>(null);
+  const [teamTxs, setTeamTxs] = useState<LeaderTx[] | null>(null);
 
   useEffect(() => {
     if (!expiresAt) return;
@@ -125,6 +181,16 @@ export default function RoleAbilityPanel({
     startTransition(async () => {
       const res = await leaderBalances();
       if (res.ok) setTeamBalances(res.balances ?? []);
+      else setMsg(res.message);
+    });
+  }
+
+  function doTeamTxs() {
+    if (pending) return;
+    setMsg(null);
+    startTransition(async () => {
+      const res = await leaderTeamTransactions();
+      if (res.ok) setTeamTxs(res.txs ?? []);
       else setMsg(res.message);
     });
   }
@@ -229,6 +295,18 @@ export default function RoleAbilityPanel({
               팀원 잔고 보기
             </button>
             {teamBalances && <BalanceList rows={teamBalances} />}
+          </div>
+          <div>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={doTeamTxs}
+              className="rounded-lg border px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+              style={{ borderColor: accent + "88", color: accent }}
+            >
+              팀원 거래내역 보기
+            </button>
+            {teamTxs && <TeamTxList rows={teamTxs} />}
           </div>
         </div>
       )}
