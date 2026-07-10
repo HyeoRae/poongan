@@ -225,6 +225,30 @@ export async function distributeJackpot(): Promise<ActionResult> {
   };
 }
 
+// 화폐개혁(디노미네이션): 전 계정 잔액을 1/divisor 로 축소하고 차액을 소각(인플레 정리)
+export async function redenominate(divisor: number): Promise<ActionResult> {
+  if (!Number.isInteger(divisor) || divisor < 2) {
+    return { ok: false, message: "나눔 비율은 2 이상의 정수여야 합니다. (예: 100)" };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("redenominate", {
+    p_divisor: divisor,
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/dashboard");
+  revalidatePath("/wallet");
+  const r = data as { divisor?: number; accounts?: number; burned?: number };
+  return {
+    ok: true,
+    message: `화폐개혁 완료: 전 계정 잔액을 1/${
+      r?.divisor ?? divisor
+    }로 축소하고 🪙${(r?.burned ?? 0).toLocaleString()}을 소각했습니다. (${
+      r?.accounts ?? 0
+    }개 계정)`,
+  };
+}
+
 // 도박 하우스세 on/off·세율 조정 (재배포 없이 실시간)
 export async function setHouseTax(
   on: boolean,
