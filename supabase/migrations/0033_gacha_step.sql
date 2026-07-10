@@ -1,10 +1,10 @@
 -- =============================================================
--- 가챠(효과카드 뽑기) 증가폭 상향: +50 → +100.
+-- 가챠(효과카드 뽑기) 비용식 지수화: 선형(200+50*n) → 지수(100*2^n).
 -- 0027 의 draw_effect_card 를 그대로 두고 비용식 한 줄만 바꿔 재정의한다.
--- (뽑을수록 비용이 더 가파르게 오르도록 증가폭을 2배로 조정)
+-- (뽑을수록 비용이 2배씩 뛰도록: 100, 200, 400, 800 ...)
 -- 0001~0032 실행 후 이 파일을 실행하세요.
 --
---  · 비용식: v_cost := 200 + 100 * v_paid  ⚠ lib/constants.ts GACHA_BASE(200)/GACHA_STEP(100) 와 값 일치
+--  · 비용식: v_cost := 100 * power(2, v_paid)  ⚠ lib/constants.ts GACHA_BASE(100)/GACHA_MULT(2) 와 값 일치
 --  · 나머지 로직(무료 3연차·등급확률·중복환급 50%)은 0027 과 동일.
 -- =============================================================
 
@@ -39,7 +39,7 @@ begin
   if v_isfree then
     v_cost := 0;
   else
-    v_cost := 200 + 100 * v_paid;                     -- 비용 점증. ⚠ lib/constants.ts GACHA_BASE(200)/GACHA_STEP(100) 와 값 일치
+    v_cost := (100 * power(2, v_paid))::int;          -- 비용 지수증가. ⚠ lib/constants.ts GACHA_BASE(100)/GACHA_MULT(2) 와 값 일치
     perform public._apply_gold(v_uid, -v_cost, 'gacha', '효과카드 뽑기', v_uid);
   end if;
 
