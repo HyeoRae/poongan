@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { PenaltyLobbySlot } from "@/lib/types";
 
@@ -15,6 +16,7 @@ export default function PenaltyLobby({
   myUserId: string;
 }) {
   const [pending, setPending] = useState(false);
+  const router = useRouter();
 
   const iPicked = lobby.some((s) => s.user_id === myUserId);
   const cols = lobby.length <= 4 ? 2 : lobby.length <= 9 ? 3 : 4;
@@ -25,7 +27,12 @@ export default function PenaltyLobby({
     const supabase = createClient();
     const { error } = await supabase.rpc("penalty_claim_animal", { p_slot: slot });
     setPending(false);
-    if (error) alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    // realtime 프레임을 놓쳐도 내 선택이 즉시 화면에 반영되도록 서버 상태 재조회(폴백)
+    router.refresh();
   }
 
   return (

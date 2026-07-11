@@ -16,6 +16,30 @@ import type {
   JackpotPool,
 } from "@/lib/types";
 
+// realtime payload 의 updated_at 은 서버 fetch 와 문자열 포맷이 다르다:
+//   realtime  예) '2026-07-11 10:42:00.12+00'    (공백 구분자 · 부분 타임존)
+//   서버 fetch 예) '2026-07-11T10:42:00.12+00:00' (ISO T · 완전 타임존)
+// 이걸 문자열로 그대로 비교(>=)하면 같은 시각이라도 realtime 쪽이 항상 '더 과거'로
+// 판정돼(공백<'T') 실시간 갱신이 통째로 버려질 수 있다 → 대기실/동물달리기 미반영.
+// 두 소스 모두 UTC 이므로 타임존 접미사를 떼고 UTC 로 파싱해 시각으로 비교한다.
+function _tsMs(s: string | null | undefined): number {
+  if (!s) return NaN;
+  const naive = String(s)
+    .replace(" ", "T")
+    .replace(/(?:[+-]\d\d(?::?\d\d)?|Z)$/, "");
+  return Date.parse(naive + "Z");
+}
+// next 가 cur 이상으로 최신인가. 파싱 불가(불명확)하면 실시간 갱신을 버리지 않도록 true.
+function _atLeastAsRecent(
+  next: string | null | undefined,
+  cur: string | null | undefined
+): boolean {
+  const n = _tsMs(next);
+  const c = _tsMs(cur);
+  if (Number.isNaN(n) || Number.isNaN(c)) return true;
+  return n >= c;
+}
+
 // 내 풍산토큰 잔액을 실시간 구독 (TopBar 등에서 사용)
 export function useMyGold(userId: string, initial: number) {
   const [gold, setGold] = useState(initial);
@@ -299,7 +323,7 @@ export function useDrawState(initial: DrawState) {
 
   // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
   const applyIfNewer = (next: DrawState) =>
-    setDraw((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+    setDraw((cur) => (_atLeastAsRecent(next.updated_at, cur.updated_at) ? next : cur));
 
   // router.refresh() 등으로 서버가 새 initial 을 내려주면 즉시 반영
   // (useState 는 최초 마운트만 읽으므로 prop 변경을 별도로 동기화)
@@ -342,7 +366,7 @@ export function useEventLobby(initial: EventLobby) {
 
   // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
   const applyIfNewer = (next: EventLobby) =>
-    setLobby((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+    setLobby((cur) => (_atLeastAsRecent(next.updated_at, cur.updated_at) ? next : cur));
 
   // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
   useEffect(() => {
@@ -352,6 +376,17 @@ export function useEventLobby(initial: EventLobby) {
 
   useEffect(() => {
     const supabase = createClient();
+    let active = true;
+    // 구독이 늦게 붙거나 realtime 프레임이 유실돼도 DB 진실로 수렴하도록 재조회.
+    const refetch = () =>
+      supabase
+        .from("event_lobby")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active && data) applyIfNewer(data as EventLobby);
+        });
     const channel = supabase
       .channel("event-lobby-state")
       .on(
@@ -363,9 +398,13 @@ export function useEventLobby(initial: EventLobby) {
           }
         }
       )
-      .subscribe();
+      // 구독 확립 직후 초기 동기화 → 구독 전 놓친 변경 보정
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") refetch();
+      });
 
     return () => {
+      active = false;
       supabase.removeChannel(channel);
     };
   }, []);
@@ -457,7 +496,7 @@ export function useQuizState(initial: QuizState) {
 
   // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
   const applyIfNewer = (next: QuizState) =>
-    setQuiz((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+    setQuiz((cur) => (_atLeastAsRecent(next.updated_at, cur.updated_at) ? next : cur));
 
   // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
   useEffect(() => {
@@ -590,7 +629,7 @@ export function usePenaltyState(initial: PenaltyState) {
 
   // 더 최신(updated_at) 값만 반영해 realtime/서버refresh 간 역전 방지
   const applyIfNewer = (next: PenaltyState) =>
-    setPenalty((cur) => (next.updated_at >= cur.updated_at ? next : cur));
+    setPenalty((cur) => (_atLeastAsRecent(next.updated_at, cur.updated_at) ? next : cur));
 
   // 서버가 새 initial 을 내려주면 즉시 반영 (prop 변경 동기화)
   useEffect(() => {
@@ -600,6 +639,18 @@ export function usePenaltyState(initial: PenaltyState) {
 
   useEffect(() => {
     const supabase = createClient();
+    let active = true;
+    // 구독이 늦게 붙거나 realtime 프레임이 유실돼도 DB 진실로 수렴하도록 재조회.
+    // (동물 선택 등 참가자 액션이 realtime 로만 전달돼 놓치면 화면 미반영되는 문제 보정)
+    const refetch = () =>
+      supabase
+        .from("penalty_state")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (active && data) applyIfNewer(data as PenaltyState);
+        });
     const channel = supabase
       .channel("penalty-state")
       .on(
@@ -616,9 +667,13 @@ export function usePenaltyState(initial: PenaltyState) {
           }
         }
       )
-      .subscribe();
+      // 구독 확립 직후 초기 동기화 → 구독 전 놓친 변경 보정
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") refetch();
+      });
 
     return () => {
+      active = false;
       supabase.removeChannel(channel);
     };
   }, []);
